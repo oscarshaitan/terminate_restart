@@ -10,21 +10,16 @@ A robust Flutter plugin for terminating and restarting your app with extensive c
 
 ## 📱 Demo
 
+### Plugin in Action
+
 <div align="center">
-  <table>
-    <tr>
-      <td align="center">
-        <img src=".github/assets/demo.gif" alt="Terminate Restart Demo" width="280"/>
-        <br>
-        <em>Plugin in Action</em>
-      </td>
-      <td align="center">
-        <img src=".github/assets/screenshot.png" alt="Plugin Interface" width="280"/>
-        <br>
-        <em>Clean & Simple Interface</em>
-      </td>
-    </tr>
-  </table>
+  <img src=".github/assets/demo.gif" alt="Plugin Demo" width="300"/>
+</div>
+
+### Clean & Simple Interface
+
+<div align="center">
+  <img src=".github/assets/screenshot.png" alt="Plugin Interface" width="300"/>
 </div>
 
 The demo showcases:
@@ -499,119 +494,6 @@ Future<void> safeRestart() async {
 }
 
 ```
-
-## ❓ FAQ
-
-### General Questions
-
-1. **Q: What's the difference between UI-only restart and full termination?**
-   
-   A: 
-   - UI-only restart recreates the app's interface without killing the process
-   - Full termination completely kills and restarts the app process
-   - UI-only is faster but may not clear all state
-   - Full termination ensures a completely fresh start
-
-2. **Q: Is it safe to clear data during restart?**
-   
-   A: Yes! The plugin provides granular control:
-   - `preserveKeychain`: Keep sensitive data like credentials
-   - `preserveUserDefaults`: Keep important settings
-   - Data clearing is atomic - either succeeds completely or fails safely
-
-3. **Q: Will this work with my state management solution?**
-   
-   A: Yes, works with all major state management solutions:
-   - Provider
-   - Bloc/Cubit
-   - GetX
-   - Riverpod
-   Just ensure proper state cleanup in your dispose methods.
-
-4. **Q: Can I use this with Shorebird/CodePush?**
-   
-   A: Absolutely! Perfect for applying dynamic updates:
-   ```dart
-   // After Shorebird update
-   await TerminateRestart.restartApp(
-     context: context,
-     mode: RestartMode.withConfirmation,
-     dialogTitle: 'Update Ready',
-   );
-   ```
-
-## 🔧 Troubleshooting
-
-### Common Issues
-
-1. **Black Screen After Restart**
-   ```dart
-   // Solution: Use UI-only restart
-   await TerminateRestart.restartApp(
-     terminate: false,
-   );
-   ```
-
-2. **Lost User Data**
-   ```dart
-   // Solution: Preserve important data
-   await TerminateRestart.restartApp(
-     clearData: true,
-     preserveUserDefaults: true,
-     preserveKeychain: true,
-   );
-   ```
-
-3. **Dialog Not Showing**
-   ```dart
-   // Solution: Ensure valid context
-   await TerminateRestart.restartApp(
-     context: context,  // Must be valid and mounted
-     mode: RestartMode.withConfirmation,
-   );
-   ```
-
-4. **Crash on iOS**
-   ```dart
-   // Solution: Handle background tasks
-   await TerminateRestart.restartApp(
-     terminate: true,
-     // iOS will handle task completion automatically
-   );
-   ```
-
-### Performance Tips
-
-1. **Minimize Full Restarts**
-   ```dart
-   // Prefer UI-only restart when possible
-   await TerminateRestart.restartApp(
-     terminate: false,
-   );
-   ```
-
-2. **Optimize Data Clearing**
-   ```dart
-   // Only clear what's necessary
-   await TerminateRestart.restartApp(
-     clearData: true,
-     preserveKeychain: true,  // Keep if not needed
-     preserveUserDefaults: true,  // Keep if not needed
-   );
-   ```
-
-3. **Handle Long Operations**
-   ```dart
-   // Show progress for long operations
-   showDialog(
-     context: context,
-     builder: (_) => LoadingDialog(),
-   );
-   
-   await TerminateRestart.restartApp(
-     clearData: true,
-   );
-   ```
 
 ## 📊 Performance Metrics
 
