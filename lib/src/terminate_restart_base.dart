@@ -18,6 +18,32 @@ class TerminateRestart {
   /// The singleton instance of the plugin
   static final instance = TerminateRestart._();
 
+  static const MethodChannel _channel =
+      MethodChannel('com.ahmedsleem.terminate_restart/restart');
+  
+  static const MethodChannel _internalChannel =
+      MethodChannel('com.ahmedsleem.terminate_restart/internal');
+  
+  static bool _initialized = false;
+  static VoidCallback? _onRootReset;
+
+  /// Initialize the plugin and set up internal handlers
+  static void initialize({VoidCallback? onRootReset}) {
+    if (!_initialized) {
+      _onRootReset = onRootReset;
+      _internalChannel.setMethodCallHandler(_handleInternalMessages);
+      _initialized = true;
+    }
+  }
+
+  static Future<dynamic> _handleInternalMessages(MethodCall call) async {
+    switch (call.method) {
+      case 'resetToRoot':
+        _onRootReset?.call();
+        break;
+    }
+  }
+
   /// Restarts the app with the given options.
   ///
   /// [context] is required when [mode] is [RestartMode.withConfirmation].

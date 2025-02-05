@@ -75,3 +75,27 @@ Initial release with the following features:
 - API documentation
 - Usage examples
 - Common issues & solutions
+
+## 1.0.3
+
+### 🚀 New Features
+- Improved UI-only restart functionality:
+  - Maintains WebSocket and HTTP connections
+  - Properly resets to root state
+  - Smooth transition animations
+  - Added `initialize` method with `onRootReset` callback
+- Better platform-specific implementations:
+  - iOS: Uses proper view controller transitions
+  - Android: Maintains Flutter engine while resetting activity
+
+### 🛠️ Improvements
+- Added comprehensive documentation
+- Added comparison of restart modes
+- Added best practices guide
+- Improved error handling
+- Added example code for common use cases
+
+### 🐛 Bug Fixes
+- Fixed UI-only restart not properly resetting to root
+- Fixed Android activity recreation issues
+- Fixed iOS view controller transition glitches

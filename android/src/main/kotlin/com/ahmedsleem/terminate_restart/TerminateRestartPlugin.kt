@@ -24,44 +24,94 @@ class TerminateRestartPlugin : FlutterPlugin, MethodCallHandler, ActivityAware {
     private lateinit var context: Context
     private var activity: Activity? = null
     private val TAG = "TerminateRestartPlugin"
+    private var flutterPluginBinding: FlutterPlugin.FlutterPluginBinding? = null
 
     override fun onAttachedToEngine(@NonNull flutterPluginBinding: FlutterPlugin.FlutterPluginBinding) {
         channel = MethodChannel(flutterPluginBinding.binaryMessenger, "com.ahmedsleem.terminate_restart/restart")
         channel.setMethodCallHandler(this)
         context = flutterPluginBinding.applicationContext
+        this.flutterPluginBinding = flutterPluginBinding
     }
 
     override fun onMethodCall(@NonNull call: MethodCall, @NonNull result: Result) {
         when (call.method) {
-            "restartApp" -> {
-                val terminate = call.argument<Boolean>("terminate") ?: true
-                val clearData = call.argument<Boolean>("clearData") ?: false
-                val preserveUserDefaults = call.argument<Boolean>("preserveUserDefaults") ?: false
-
-                try {
-                    // Clear data if requested
-                    if (clearData) {
-                        clearAppData(preserveUserDefaults)
-                    }
-
-                    // Restart the app
-                    if (terminate) {
-                        restartAppWithTerminate(result)
-                    } else {
-                        restartAppWithoutTerminate(result)
-                    }
-                } catch (e: Exception) {
-                    Log.e(TAG, "Error restarting app", e)
-                    result.error("RESTART_ERROR", e.message, null)
-                }
-            }
+            "restartApp" -> handleRestartApp(call, result)
             else -> result.notImplemented()
         }
     }
 
-    private fun clearAppData(preserveUserDefaults: Boolean) {
+    private fun handleRestartApp(call: MethodCall, result: Result) {
         try {
-            Log.d(TAG, "Clearing app data (preserveUserDefaults: $preserveUserDefaults)")
+            val options = call.arguments as? Map<String, Any>
+            val terminate = options?.get("terminate") as? Boolean ?: false
+            val clearData = options?.get("clearData") as? Boolean ?: false
+            val preserveKeychain = options?.get("preserveKeychain") as? Boolean ?: false
+            val preserveUserDefaults = options?.get("preserveUserDefaults") as? Boolean ?: false
+
+            if (clearData) {
+                clearAppData(preserveKeychain, preserveUserDefaults) { success, error ->
+                    if (success) {
+                        performRestart(terminate)
+                        result.success(true)
+                    } else {
+                        result.error("CLEAR_ERROR", "Failed to clear app data", error?.message)
+                    }
+                }
+            } else {
+                performRestart(terminate)
+                result.success(true)
+            }
+        } catch (e: Exception) {
+            result.error("RESTART_ERROR", "Failed to restart app", e.message)
+        }
+    }
+
+    private fun performRestart(terminate: Boolean) {
+        val activity = activity ?: return
+        
+        if (terminate) {
+            // Full app termination
+            android.os.Process.killProcess(android.os.Process.myPid())
+        } else {
+            // UI-only restart with state reset
+            activity.runOnUiThread {
+                try {
+                    // Create an internal channel to communicate with Flutter
+                    val messenger = flutterPluginBinding?.binaryMessenger
+                    if (messenger != null) {
+                        val channel = MethodChannel(messenger, "com.ahmedsleem.terminate_restart/internal")
+                        // Notify Flutter to reset navigation and state
+                        channel.invokeMethod("resetToRoot", null)
+                    }
+                    
+                    // Get the Flutter activity
+                    val flutterActivity = activity as? FlutterActivity
+                    if (flutterActivity != null) {
+                        // Create new intent to restart the activity
+                        val intent = activity.intent
+                        intent.addFlags(Intent.FLAG_ACTIVITY_CLEAR_TOP or Intent.FLAG_ACTIVITY_NEW_TASK)
+                        intent.putExtra("uiRestart", true)
+                        
+                        // Start new activity instance while preserving the engine
+                        activity.startActivity(intent)
+                        activity.overridePendingTransition(android.R.anim.fade_in, android.R.anim.fade_out)
+                        
+                        // Finish current activity
+                        activity.finish()
+                    } else {
+                        // Fallback to simple recreate if not FlutterActivity
+                        activity.recreate()
+                    }
+                } catch (e: Exception) {
+                    Log.e("TerminateRestart", "Error during UI restart: ${e.message}")
+                }
+            }
+        }
+    }
+
+    private fun clearAppData(preserveKeychain: Boolean, preserveUserDefaults: Boolean, callback: (Boolean, Throwable?) -> Unit) {
+        try {
+            Log.d(TAG, "Clearing app data (preserveKeychain: $preserveKeychain, preserveUserDefaults: $preserveUserDefaults)")
             
             // Clear SharedPreferences if not preserved
             if (!preserveUserDefaults) {
@@ -101,81 +151,10 @@ class TerminateRestartPlugin : FlutterPlugin, MethodCallHandler, ActivityAware {
             File(context.filesDir.parent, "app_webview").deleteRecursively()
             Log.d(TAG, "Cleared WebView data")
 
+            callback(true, null)
         } catch (e: Exception) {
             Log.e(TAG, "Error clearing app data", e)
-            throw e
-        }
-    }
-
-    private fun restartAppWithTerminate(result: Result) {
-        activity?.let { currentActivity ->
-            try {
-                Log.d(TAG, "Attempting to restart app with terminate")
-                
-                // Create the restart intent
-                val intent = context.packageManager.getLaunchIntentForPackage(context.packageName)?.apply {
-                    addFlags(Intent.FLAG_ACTIVITY_NEW_TASK or Intent.FLAG_ACTIVITY_CLEAR_TASK)
-                    addFlags(Intent.FLAG_ACTIVITY_CLEAR_TOP)
-                    addFlags(Intent.FLAG_ACTIVITY_NO_ANIMATION)
-                }
-
-                if (intent != null) {
-                    Log.d(TAG, "Created restart intent with package: ${context.packageName}")
-                    
-                    // Schedule the app restart
-                    intent.putExtra("restart_trigger", System.currentTimeMillis())
-                    
-                    // Return success before starting new activity
-                    result.success(true)
-                    
-                    // Start the new activity and kill the current process
-                    Thread {
-                        try {
-                            // Small delay to ensure the result is sent
-                            Thread.sleep(100)
-                            
-                            // Start the new activity
-                            context.startActivity(intent)
-                            
-                            // Force close all activities
-                            currentActivity.finishAffinity()
-                            
-                            // Kill the current process
-                            Log.d(TAG, "Terminating process")
-                            Process.killProcess(Process.myPid())
-                            exitProcess(0)
-                        } catch (e: Exception) {
-                            Log.e(TAG, "Error in termination thread", e)
-                        }
-                    }.start()
-                } else {
-                    Log.e(TAG, "Could not create launch intent")
-                    result.error("INTENT_ERROR", "Could not create launch intent", null)
-                }
-            } catch (e: Exception) {
-                Log.e(TAG, "Error restarting app", e)
-                result.error("RESTART_FAILED", e.message, null)
-            }
-        }
-    }
-
-    private fun restartAppWithoutTerminate(result: Result) {
-        activity?.let { currentActivity ->
-            try {
-                Log.d(TAG, "Attempting to restart app without terminate")
-                currentActivity.runOnUiThread {
-                    try {
-                        currentActivity.recreate()
-                        result.success(true)
-                    } catch (e: Exception) {
-                        Log.e(TAG, "Error during UI-only restart", e)
-                        result.error("RESTART_ERROR", e.message, null)
-                    }
-                }
-            } catch (e: Exception) {
-                Log.e(TAG, "Error restarting app", e)
-                result.error("RESTART_ERROR", e.message, null)
-            }
+            callback(false, e)
         }
     }
 

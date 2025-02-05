@@ -64,96 +64,179 @@ Add this to your package's `pubspec.yaml` file:
 
 ```yaml
 dependencies:
-  terminate_restart: ^1.0.0
+  terminate_restart: ^1.0.3
 ```
+
+### Permissions
+
+No special permissions are required for either Android or iOS! The plugin uses only standard platform APIs:
+
+#### Android
+- No additional permissions needed in AndroidManifest.xml
+- Uses standard Activity lifecycle methods
+- No protected features accessed
+
+#### iOS
+- No special entitlements needed in Info.plist
+- No additional capabilities required
+- Uses standard UIKit methods
 
 ## 🚀 Getting Started
 
-### Basic Usage
+### Initialization
+
+Initialize the plugin in your `main.dart` to handle UI-only restarts properly:
 
 ```dart
-import 'package:terminate_restart/terminate_restart.dart';
-
-// Simple UI-only restart
-await TerminateRestart.restartApp(
-  terminate: false, // false for UI-only restart
-);
-
-// Full process termination and restart
-await TerminateRestart.restartApp(
-  terminate: true, // true for full process termination
-);
-```
-
-### Advanced Usage with Data Clearing
-
-```dart
-// Restart with data clearing
-await TerminateRestart.restartApp(
-  clearData: true, // Clear app data
-  preserveKeychain: true, // Keep sensitive data
-  preserveUserDefaults: false, // Clear preferences
-  terminate: true, // Full process restart
-);
-```
-
-### Confirmation Dialog
-
-```dart
-// Restart with custom confirmation dialog
-await TerminateRestart.restartApp(
-  context: context, // Required for dialog
-  mode: RestartMode.withConfirmation,
-  dialogTitle: '✨ Update Ready!',
-  dialogMessage: 'Restart now to apply updates?',
-  restartNowText: '🚀 Restart Now',
-  restartLaterText: '⏰ Later',
-  cancelText: '❌ Cancel',
-);
-```
-
-### Error Handling
-
-```dart
-try {
-  final success = await TerminateRestart.restartApp(
-    terminate: true,
-    clearData: true,
+void main() {
+  TerminateRestart.initialize(
+    onRootReset: () {
+      // Reset your app's navigation to root
+      // Reset any global state
+      // Clear navigation stack
+      // This is called during UI-only restarts
+    },
   );
   
-  if (!success) {
-    print('Restart cancelled or failed');
-  }
-} catch (e) {
-  print('Error during restart: $e');
+  runApp(MyApp());
 }
 ```
 
-## 🔧 Configuration Options
+### Basic Usage
 
-| Option | Type | Default | Description |
-|--------|------|---------|-------------|
-| `context` | `BuildContext?` | `null` | Required for confirmation dialog |
-| `mode` | `RestartMode` | `immediate` | Restart mode (immediate/confirmation) |
-| `clearData` | `bool` | `false` | Clear app data during restart |
-| `preserveKeychain` | `bool` | `false` | Keep keychain data when clearing |
-| `preserveUserDefaults` | `bool` | `false` | Keep user defaults when clearing |
-| `terminate` | `bool` | `true` | Full termination vs UI-only restart |
+The plugin offers three restart modes:
 
-## 🛡️ Error Handling
+1. **Full Restart (with termination)**
+```dart
+await TerminateRestart.restartApp(
+  options: TerminateRestartOptions(
+    terminate: true,  // Fully terminate and restart
+  ),
+);
+```
 
-The plugin includes comprehensive error handling:
+2. **UI-Only Restart (maintains connections)**
+```dart
+await TerminateRestart.restartApp(
+  options: TerminateRestartOptions(
+    terminate: false,  // UI-only restart
+  ),
+);
+```
+- Resets app to root state
+- Maintains WebSocket/HTTP connections
+- Preserves background tasks
+- Smooth transition animation
 
+3. **Restart with Data Clearing**
+```dart
+await TerminateRestart.restartApp(
+  options: TerminateRestartOptions(
+    terminate: true,
+    clearData: true,
+    preserveKeychain: true,  // Optional: keep keychain data
+    preserveUserDefaults: false,  // Optional: clear user defaults
+  ),
+);
+```
+
+### Restart Modes Comparison
+
+| Feature | Full Restart | UI-Only Restart |
+|---------|-------------|-----------------|
+| Connections | ❌ Terminated | ✅ Maintained |
+| State | ❌ Cleared | ✅ Resetable |
+| Navigation | ❌ Cleared | ✅ Reset to Root |
+| Speed | 🐢 Slower | 🚀 Faster |
+| Memory | ✅ Fully Cleared | ⚠️ Preserved |
+| Background Tasks | ❌ Terminated | ✅ Maintained |
+
+### Common Use Cases
+
+1. **Theme Switching**
+```dart
+// Use UI-only restart to switch themes smoothly
+await TerminateRestart.restartApp(
+  options: TerminateRestartOptions(
+    terminate: false,
+  ),
+);
+```
+
+2. **Language Change**
+```dart
+// Use UI-only restart to apply new locale
+await TerminateRestart.restartApp(
+  options: TerminateRestartOptions(
+    terminate: false,
+  ),
+);
+```
+
+3. **User Logout**
+```dart
+// Full restart with data clearing
+await TerminateRestart.restartApp(
+  options: TerminateRestartOptions(
+    terminate: true,
+    clearData: true,
+    preserveKeychain: true,  // Keep secure data
+  ),
+);
+```
+
+4. **App Update**
+```dart
+// Full restart to apply updates
+await TerminateRestart.restartApp(
+  options: TerminateRestartOptions(
+    terminate: true,
+  ),
+);
+```
+
+### Best Practices
+
+1. **Choose the Right Mode**
+   - Use UI-only restart when maintaining connections is important
+   - Use full restart when a clean slate is needed
+   - Use data clearing when security is a concern
+
+2. **Handle Root Reset**
+   - Always implement the `onRootReset` callback
+   - Clear navigation stacks
+   - Reset global state
+   - Update UI accordingly
+
+3. **Error Handling**
 ```dart
 try {
   await TerminateRestart.restartApp(
-    clearData: true,
+    options: TerminateRestartOptions(
+      terminate: false,
+    ),
   );
 } catch (e) {
   print('Restart failed: $e');
-  // Handle the error appropriately
+  // Handle failure
 }
 ```
+
+## 📱 Platform-Specific Notes
+
+### Android
+- Uses `Process.killProcess()` for clean termination
+- Handles activity recreation properly
+- Manages app data clearing through proper Android APIs
+- Supports custom intent flags
+- Handles task stack management
+
+### iOS
+- Implements clean process termination
+- Handles UserDefaults and Keychain data preservation
+- Manages view controller recreation for UI-only restarts
+- Supports background task completion
+- Handles state restoration
 
 ## 🔍 Common Use Cases
 
@@ -186,17 +269,31 @@ try {
    );
    ```
 
-## 📱 Platform-Specific Notes
+## 📊 Performance Metrics
 
-### Android
-- Uses `Process.killProcess()` for clean termination
-- Handles activity recreation properly
-- Manages app data clearing through proper Android APIs
+| Operation | Average Time |
+|-----------|-------------|
+| UI-only Restart | ~300ms |
+| Full Termination | ~800ms |
+| Data Clearing | ~200ms |
+| With Dialog | +100ms |
 
-### iOS
-- Implements clean process termination
-- Handles UserDefaults and Keychain data preservation
-- Manages view controller recreation for UI-only restarts
+## 🔐 Security Considerations
+
+1. **Sensitive Data**
+   - Use `preserveKeychain` for credentials
+   - Clear data on logout
+   - Handle biometric authentication state
+
+2. **State Management**
+   - Clear sensitive state before restart
+   - Handle authentication tokens properly
+   - Manage secure storage access
+
+3. **Platform Security**
+   - Proper permission handling
+   - Secure data clearing
+   - Protected file access
 
 ## 🤝 Contributing
 
@@ -439,88 +536,3 @@ try {
   print('Timeout: $e');
 }
 ```
-
-## 📱 Platform-Specific Notes
-
-### Android
-- Uses `Process.killProcess()` for clean termination
-- Handles activity recreation properly
-- Manages app data clearing through proper Android APIs
-- Supports custom intent flags
-- Handles task stack management
-
-### iOS
-- Implements clean process termination
-- Handles UserDefaults and Keychain data preservation
-- Manages view controller recreation for UI-only restarts
-- Supports background task completion
-- Handles state restoration
-
-## 🔍 Best Practices
-
-1. **Data Preservation**
-```dart
-// Always preserve sensitive data
-await TerminateRestart.restartApp(
-  clearData: true,
-  preserveKeychain: true, // Keep credentials
-  preserveUserDefaults: true, // Keep important settings
-);
-```
-
-2. **User Experience**
-```dart
-// Show progress during long operations
-showDialog(
-  context: context,
-  barrierDismissible: false,
-  builder: (context) => const CircularProgressIndicator(),
-);
-
-await TerminateRestart.restartApp(
-  clearData: true,
-);
-```
-
-3. **Error Recovery**
-```dart
-Future<void> safeRestart() async {
-  int retryCount = 0;
-  while (retryCount < 3) {
-    try {
-      await TerminateRestart.restartApp();
-      break;
-    } catch (e) {
-      retryCount++;
-      await Future.delayed(Duration(seconds: 1));
-    }
-  }
-}
-
-```
-
-## 📊 Performance Metrics
-
-| Operation | Average Time |
-|-----------|-------------|
-| UI-only Restart | ~300ms |
-| Full Termination | ~800ms |
-| Data Clearing | ~200ms |
-| With Dialog | +100ms |
-
-## 🔐 Security Considerations
-
-1. **Sensitive Data**
-   - Use `preserveKeychain` for credentials
-   - Clear data on logout
-   - Handle biometric authentication state
-
-2. **State Management**
-   - Clear sensitive state before restart
-   - Handle authentication tokens properly
-   - Manage secure storage access
-
-3. **Platform Security**
-   - Proper permission handling
-   - Secure data clearing
-   - Protected file access

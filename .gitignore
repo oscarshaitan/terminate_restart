@@ -94,3 +94,26 @@ app.*.map.json
 !**/ios/**/default.pbxuser
 !**/ios/**/default.perspectivev3
 !/packages/flutter_tools/test/data/dart_dependencies_test/**/.packages
+
+# New exclusions
+.DS_Store
+.dart_tool/
+.idea/
+.vscode/
+.packages
+.pub/
+build/
+example/build/
+*.iml
+.flutter-plugins
+.flutter-plugins-dependencies
+.pub-cache/
+.dart_tool/
+.packages
+pubspec.lock
+coverage/
+doc/api/
+.env
+*.g.dart
+*.freezed.dart
+*.mocks.dart

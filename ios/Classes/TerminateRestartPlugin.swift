@@ -121,41 +121,23 @@ public class TerminateRestartPlugin: NSObject, FlutterPlugin {
             // Disable user interaction during transition
             window.isUserInteractionEnabled = false
             
-            // Create a temporary view controller for transition
-            let tempViewController = UIViewController()
-            tempViewController.view.backgroundColor = .white
+            // Create a new Flutter view controller with the same engine
+            let newFlutterViewController = FlutterViewController(engine: flutterEngine, nibName: nil, bundle: nil)
             
-            // First transition to temp controller
+            // Notify Flutter to reset navigation and state
+            let channel = FlutterMethodChannel(name: "com.ahmedsleem.terminate_restart/internal", binaryMessenger: flutterEngine.binaryMessenger)
+            channel.invokeMethod("resetToRoot", arguments: nil)
+            
+            // Perform the view controller replacement with animation
             UIView.transition(with: window,
-                            duration: 0.15,
+                            duration: 0.3,
                             options: .transitionCrossDissolve,
                             animations: {
-                window.rootViewController = tempViewController
-                print(" [TerminateRestart] Switched to temp controller")
+                window.rootViewController = newFlutterViewController
             }) { _ in
-                // Create a new Flutter view controller with the same engine
-                let newFlutterViewController = FlutterViewController(engine: flutterEngine, nibName: nil, bundle: nil)
-                
-                // Reset to new Flutter controller after a short delay
-                DispatchQueue.main.asyncAfter(deadline: .now() + 0.1) {
-                    UIView.transition(with: window,
-                                    duration: 0.15,
-                                    options: .transitionCrossDissolve,
-                                    animations: {
-                        window.rootViewController = newFlutterViewController
-                        print(" [TerminateRestart] Created new Flutter controller")
-                    }) { _ in
-                        // Re-enable user interaction
-                        window.isUserInteractionEnabled = true
-                        print(" [TerminateRestart] UI restart completed")
-                        
-                        // Notify Flutter that restart is complete
-                        let channel = FlutterMethodChannel(
-                            name: "com.ahmedsleem.terminate_restart/restart",
-                            binaryMessenger: flutterEngine.binaryMessenger)
-                        channel.invokeMethod("onRestartCompleted", arguments: nil)
-                    }
-                }
+                // Re-enable user interaction after transition
+                window.isUserInteractionEnabled = true
+                print(" [TerminateRestart] UI restart completed")
             }
         }
     }
