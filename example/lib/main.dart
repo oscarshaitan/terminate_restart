@@ -85,16 +85,6 @@ class _MyHomePageState extends State<MyHomePage> with WidgetsBindingObserver {
     }
   }
 
-  Future<void> _clearStoredData() async {
-    if (_prefsInstance == null) return;
-    
-    try {
-      await _prefsInstance!.clear();
-    } catch (e) {
-      debugPrint('Error clearing prefs: $e');
-    }
-  }
-
   Future<void> _incrementCounter() async {
     if (_prefsInstance == null) return;
     
@@ -125,15 +115,11 @@ class _MyHomePageState extends State<MyHomePage> with WidgetsBindingObserver {
   Future<void> _restartApp({
     required RestartMode mode,
     required String buttonLabel,
+    bool? terminate,
   }) async {
     if (!mounted) return;
 
     try {
-      // Clear data first if requested
-      if (_clearData) {
-        await _clearStoredData();
-      }
-
       // Show confirmation dialog if needed
       if (mode == RestartMode.withConfirmation) {
         final confirmed = await showDialog<bool>(
@@ -163,13 +149,16 @@ class _MyHomePageState extends State<MyHomePage> with WidgetsBindingObserver {
       final result = await TerminateRestart.restartApp(
         context: mode == RestartMode.withConfirmation ? context : null,
         mode: mode,
-        clearData: false, // We already cleared data if needed
+        clearData: _clearData,
         preserveKeychain: _preserveKeychain,
         preserveUserDefaults: _preserveUserDefaults,
-        terminate: _terminate,
+        terminate: terminate ?? _terminate,
       );
 
-      if (!result && mounted) {
+      if (result && mounted && !terminate!) {
+        // Force reload data after UI restart
+        await _initializePrefs();
+      } else if (!result && mounted) {
         ScaffoldMessenger.of(context).showSnackBar(
           const SnackBar(content: Text('Failed to restart app')),
         );
@@ -334,6 +323,7 @@ class _MyHomePageState extends State<MyHomePage> with WidgetsBindingObserver {
                         onPressed: () => _restartApp(
                           mode: RestartMode.immediate,
                           buttonLabel: 'Terminate & Restart',
+                          terminate: true,
                         ),
                         icon: const Icon(Icons.power_settings_new),
                         label: const Text('Terminate & Restart'),
@@ -343,13 +333,11 @@ class _MyHomePageState extends State<MyHomePage> with WidgetsBindingObserver {
                     SizedBox(
                       width: double.infinity,
                       child: FilledButton.icon(
-                        onPressed: () {
-                          setState(() => _terminate = false);
-                          _restartApp(
-                            mode: RestartMode.immediate,
-                            buttonLabel: 'Restart Only',
-                          );
-                        },
+                        onPressed: () => _restartApp(
+                          mode: RestartMode.immediate,
+                          buttonLabel: 'Restart Only',
+                          terminate: false,
+                        ),
                         icon: const Icon(Icons.refresh),
                         label: const Text('Restart Only'),
                       ),
@@ -361,6 +349,7 @@ class _MyHomePageState extends State<MyHomePage> with WidgetsBindingObserver {
                         onPressed: () => _restartApp(
                           mode: RestartMode.withConfirmation,
                           buttonLabel: 'Restart',
+                          terminate: true,
                         ),
                         icon: const Icon(Icons.help_outline),
                         label: const Text('Show Dialog Example'),

@@ -1,9 +1,10 @@
 name: terminate_restart
-description: A robust Flutter plugin for terminating and restarting your app with extensive customization options. Supports both Android and iOS with features like data clearing and state preservation.
+description: A Flutter plugin for app termination and restart with data clearing options.
 version: 1.0.0
 homepage: https://github.com/sleem2012/terminate_restart
 repository: https://github.com/sleem2012/terminate_restart
 issue_tracker: https://github.com/sleem2012/terminate_restart/issues
+documentation: https://github.com/sleem2012/terminate_restart/blob/main/README.md
 
 environment:
   sdk: '>=3.0.0 <4.0.0'

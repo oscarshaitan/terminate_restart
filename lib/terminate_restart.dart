@@ -2,7 +2,9 @@ library terminate_restart;
 
 export 'src/terminate_restart_base.dart';
 
+import 'dart:async';
 import 'package:flutter/material.dart';
+import 'package:flutter/services.dart';
 import 'terminate_restart_platform_interface.dart';
 
 /// Enum to specify the restart mode
@@ -17,10 +19,35 @@ enum RestartMode {
 /// The main plugin class for restarting Flutter apps
 class TerminateRestart {
   /// Private constructor to prevent instantiation
-  TerminateRestart._();
+  TerminateRestart._() {
+    _channel.setMethodCallHandler(_handleMethodCall);
+  }
 
   /// The singleton instance of the plugin
   static final instance = TerminateRestart._();
+
+  /// Method channel for platform communication
+  static const MethodChannel _channel =
+      MethodChannel('com.ahmedsleem.terminate_restart/restart');
+
+  /// Completer for tracking restart completion
+  Completer<void>? _restartCompleter;
+
+  /// Handle method calls from the platform
+  Future<dynamic> _handleMethodCall(MethodCall call) async {
+    switch (call.method) {
+      case 'onRestartCompleted':
+        if (_restartCompleter != null && !_restartCompleter!.isCompleted) {
+          _restartCompleter!.complete();
+        }
+        break;
+      default:
+        throw PlatformException(
+          code: 'Unimplemented',
+          message: 'Method ${call.method} not implemented',
+        );
+    }
+  }
 
   /// Restarts the app with the given options.
   ///
@@ -50,8 +77,10 @@ class TerminateRestart {
     String? cancelText,
   }) async {
     // Validate context when needed
-    if (mode == RestartMode.withConfirmation && (context == null || context.mounted == false)) {
-      throw ArgumentError('context is required when mode is RestartMode.withConfirmation');
+    if (mode == RestartMode.withConfirmation &&
+        (context == null || context.mounted == false)) {
+      throw ArgumentError(
+          'context is required when mode is RestartMode.withConfirmation');
     }
 
     // Show confirmation dialog if needed
@@ -86,15 +115,37 @@ class TerminateRestart {
 
     try {
       debugPrint('🔄 [TerminateRestart] Preparing for restart...');
-      return await TerminateRestartPlatform.instance.restartApp(
+
+      // Create a completer to track restart completion for UI-only restarts
+      if (!terminate) {
+        instance._restartCompleter = Completer<void>();
+      }
+
+      // Call platform to perform restart
+      final result = await TerminateRestartPlatform.instance.restartApp(
         clearData: clearData,
         preserveKeychain: preserveKeychain,
         preserveUserDefaults: preserveUserDefaults,
         terminate: terminate,
       );
+
+      // For UI-only restarts, wait for completion
+      if (!terminate && result) {
+        await instance._restartCompleter?.future.timeout(
+          const Duration(seconds: 5),
+          onTimeout: () {
+            debugPrint('🔄 [TerminateRestart] Restart completion timed out');
+            instance._restartCompleter?.completeError('Restart timed out');
+          },
+        );
+      }
+
+      return result;
     } catch (e) {
       debugPrint('🔄 [TerminateRestart] Error restarting app: $e');
       rethrow;
+    } finally {
+      instance._restartCompleter = null;
     }
   }
 }

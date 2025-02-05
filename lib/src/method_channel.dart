@@ -5,7 +5,8 @@ import '../terminate_restart_platform_interface.dart';
 /// An implementation of [TerminateRestartPlatform] that uses method channels.
 class MethodChannelTerminateRestart extends TerminateRestartPlatform {
   /// The method channel used to communicate with the native platform.
-  final methodChannel = const MethodChannel('com.ahmedsleem.terminate_restart/restart');
+  final methodChannel =
+      const MethodChannel('com.ahmedsleem.terminate_restart/restart');
 
   @override
   Future<bool> restartApp({

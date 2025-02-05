@@ -46,8 +46,11 @@ class TerminateRestart {
     String? cancelText,
   }) async {
     // Validate context when needed
-    if (mode == RestartMode.withConfirmation && context == null) {
-      throw ArgumentError('context is required when mode is not RestartMode.immediate');
+    if (mode == RestartMode.withConfirmation &&
+        (context == null || !context.mounted)) {
+      throw ArgumentError(
+        'context is required when mode is RestartMode.withConfirmation',
+      );
     }
 
     // Show confirmation dialog if needed

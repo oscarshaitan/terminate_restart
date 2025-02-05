@@ -23,131 +23,241 @@ public class TerminateRestartPlugin: NSObject, FlutterPlugin {
               let preserveKeychain = args["preserveKeychain"] as? Bool,
               let preserveUserDefaults = args["preserveUserDefaults"] as? Bool,
               let terminate = args["terminate"] as? Bool else {
-            result(FlutterError(code: "INVALID_ARGS",
-                              message: "Invalid arguments provided",
-                              details: nil))
+            result(FlutterError(code: "INVALID_ARGS", message: "Invalid arguments provided", details: nil))
             return
         }
         
-        // Return success before restarting
+        print(" [TerminateRestart] Starting restart with clearData: \(clearData), terminate: \(terminate)")
+        
+        // Return success early to allow Flutter to clean up
         result(true)
         
-        // Clear data and restart after a delay to ensure UI has updated
-        DispatchQueue.main.asyncAfter(deadline: .now() + 0.1) {
-            // Clear app data if requested
-            if clearData {
-                self.clearAppData(preserveKeychain: preserveKeychain,
-                            preserveUserDefaults: preserveUserDefaults)
+        // Perform restart with data clearing if needed
+        if clearData {
+            print(" [TerminateRestart] Starting data clearing...")
+            clearAppData(preserveKeychain: preserveKeychain,
+                        preserveUserDefaults: preserveUserDefaults) { [weak self] success, error in
+                if let error = error {
+                    print(" [TerminateRestart] Data clearing failed: \(error)")
+                    return
+                }
+                print(" [TerminateRestart] Data clearing completed successfully")
+                DispatchQueue.main.async {
+                    self?.performRestart(terminate: terminate)
+                }
             }
-            
-            // Wait for data clearing to complete before restarting
-            DispatchQueue.main.asyncAfter(deadline: .now() + 0.5) {
-                self.restartApp(terminate: terminate)
-            }
+        } else {
+            performRestart(terminate: terminate)
         }
     }
     
-    private func restartApp(terminate: Bool) {
-        // Get the app's root view controller
-        guard let window = UIApplication.shared.keyWindow ?? UIApplication.shared.windows.first,
-              let rootViewController = window.rootViewController else {
-            NSLog("[TerminateRestartPlugin] Error: Could not get root view controller")
+    private func performRestart(terminate: Bool) {
+        // Ensure we're on the main thread
+        if !Thread.isMainThread {
+            DispatchQueue.main.async { [weak self] in
+                self?.performRestart(terminate: terminate)
+            }
             return
         }
         
         if terminate {
-            // Full app restart - create new instance and terminate current
-            if let bundleId = Bundle.main.bundleIdentifier,
-               let url = URL(string: "\(bundleId)://") {
+            // Create a new instance of the app
+            if let bundleId = Bundle.main.bundleIdentifier {
+                let url = URL(string: "\(bundleId)://")!
+                
+                // Save state indicating we're performing a restart
+                UserDefaults.standard.set(true, forKey: "TerminateRestart_IsRestarting")
+                UserDefaults.standard.synchronize()
+                
+                print(" [TerminateRestart] Opening app URL: \(url)")
+                
                 if UIApplication.shared.canOpenURL(url) {
-                    UIApplication.shared.open(url, options: [:], completionHandler: nil)
+                    UIApplication.shared.open(url, options: [:]) { success in
+                        if !success {
+                            print(" [TerminateRestart] Failed to open app URL")
+                        }
+                    }
+                    
+                    print(" [TerminateRestart] Terminating app...")
+                    // Force suspend the app
+                    UIControl().sendAction(#selector(URLSessionTask.suspend), to: UIApplication.shared, for: nil)
+                    
+                    // Exit after a delay to ensure URL opening completes
+                    DispatchQueue.main.asyncAfter(deadline: .now() + 0.5) {
+                        exit(0)
+                    }
+                } else {
+                    print(" [TerminateRestart] Error: Cannot open app URL")
                 }
-            }
-            
-            // Terminate the current instance
-            UIControl().sendAction(#selector(URLSessionTask.suspend), to: UIApplication.shared, for: nil)
-            Timer.scheduledTimer(withTimeInterval: 0.2, repeats: false) { (timer) in
-                exit(1)
+            } else {
+                print(" [TerminateRestart] Error: No bundle ID found")
             }
         } else {
-            // UI-only restart for Flutter
+            print(" [TerminateRestart] Performing UI-only restart...")
+            
+            guard let window = UIApplication.shared.keyWindow ?? UIApplication.shared.windows.first else {
+                print(" [TerminateRestart] Error: No window found")
+                return
+            }
+            
+            guard let rootViewController = window.rootViewController else {
+                print(" [TerminateRestart] Error: No root controller found")
+                return
+            }
+            
+            guard let flutterViewController = rootViewController as? FlutterViewController else {
+                print(" [TerminateRestart] Error: Root controller is not FlutterViewController")
+                return
+            }
+            
+            // Get the Flutter engine
+            guard let flutterEngine = flutterViewController.engine else {
+                print(" [TerminateRestart] Error: No Flutter engine found")
+                return
+            }
+            
+            print(" [TerminateRestart] Creating new Flutter view controller")
+            
+            // Disable user interaction during transition
+            window.isUserInteractionEnabled = false
+            
+            // Create a temporary view controller for transition
             let tempViewController = UIViewController()
             tempViewController.view.backgroundColor = .white
             
-            // Force a reload of the view hierarchy
+            // First transition to temp controller
             UIView.transition(with: window,
-                            duration: 0.3,
+                            duration: 0.15,
                             options: .transitionCrossDissolve,
                             animations: {
                 window.rootViewController = tempViewController
+                print(" [TerminateRestart] Switched to temp controller")
             }) { _ in
-                // Reset to original root after delay
-                DispatchQueue.main.asyncAfter(deadline: .now() + 0.3) {
-                    // For Flutter, we can reuse the existing root controller
+                // Create a new Flutter view controller with the same engine
+                let newFlutterViewController = FlutterViewController(engine: flutterEngine, nibName: nil, bundle: nil)
+                
+                // Reset to new Flutter controller after a short delay
+                DispatchQueue.main.asyncAfter(deadline: .now() + 0.1) {
                     UIView.transition(with: window,
-                                    duration: 0.3,
+                                    duration: 0.15,
                                     options: .transitionCrossDissolve,
                                     animations: {
-                        window.rootViewController = rootViewController
-                    })
+                        window.rootViewController = newFlutterViewController
+                        print(" [TerminateRestart] Created new Flutter controller")
+                    }) { _ in
+                        // Re-enable user interaction
+                        window.isUserInteractionEnabled = true
+                        print(" [TerminateRestart] UI restart completed")
+                        
+                        // Notify Flutter that restart is complete
+                        let channel = FlutterMethodChannel(
+                            name: "com.ahmedsleem.terminate_restart/restart",
+                            binaryMessenger: flutterEngine.binaryMessenger)
+                        channel.invokeMethod("onRestartCompleted", arguments: nil)
+                    }
                 }
             }
         }
     }
     
-    private func clearAppData(preserveKeychain: Bool, preserveUserDefaults: Bool) {
-        NSLog("[TerminateRestartPlugin] Clearing app data (preserveKeychain: \(preserveKeychain), preserveUserDefaults: \(preserveUserDefaults))")
+    private func clearAppData(preserveKeychain: Bool, preserveUserDefaults: Bool, completion: @escaping (Bool, Error?) -> Void) {
+        // Use a serial queue for data clearing
+        let clearQueue = DispatchQueue(label: "com.ahmedsleem.terminate_restart.clear")
         
-        // Clear UserDefaults if not preserved
-        if !preserveUserDefaults {
-            if let bundleId = Bundle.main.bundleIdentifier {
-                UserDefaults.standard.removePersistentDomain(forName: bundleId)
-                UserDefaults.standard.synchronize()
-                NSLog("[TerminateRestartPlugin] Cleared UserDefaults")
+        clearQueue.async {
+            var clearError: Error?
+            
+            print(" [TerminateRestart] Clearing UserDefaults...")
+            // Clear UserDefaults if not preserved
+            if !preserveUserDefaults {
+                if let bundleId = Bundle.main.bundleIdentifier {
+                    UserDefaults.standard.removePersistentDomain(forName: bundleId)
+                    UserDefaults.standard.synchronize()
+                }
             }
-        }
-        
-        // Clear app's document directory
-        if let docPath = FileManager.default.urls(for: .documentDirectory, in: .userDomainMask).first {
-            try? FileManager.default.removeItem(at: docPath)
-            try? FileManager.default.createDirectory(at: docPath, withIntermediateDirectories: true)
-            NSLog("[TerminateRestartPlugin] Cleared document directory")
-        }
-        
-        // Clear app's cache directory
-        if let cachePath = FileManager.default.urls(for: .cachesDirectory, in: .userDomainMask).first {
-            try? FileManager.default.removeItem(at: cachePath)
-            try? FileManager.default.createDirectory(at: cachePath, withIntermediateDirectories: true)
-            NSLog("[TerminateRestartPlugin] Cleared cache directory")
-        }
-        
-        // Clear app's temporary directory
-        try? FileManager.default.removeItem(at: FileManager.default.temporaryDirectory)
-        try? FileManager.default.createDirectory(at: FileManager.default.temporaryDirectory, withIntermediateDirectories: true)
-        NSLog("[TerminateRestartPlugin] Cleared temporary directory")
-        
-        // Clear Keychain if not preserved
-        if !preserveKeychain {
-            clearKeychain()
-            NSLog("[TerminateRestartPlugin] Cleared keychain")
-        }
-        
-        // Force changes to be written
-        UserDefaults.standard.synchronize()
-    }
-    
-    private func clearKeychain() {
-        let secItemClasses = [
-            kSecClassGenericPassword,
-            kSecClassInternetPassword,
-            kSecClassCertificate,
-            kSecClassKey,
-            kSecClassIdentity
-        ]
-        
-        for itemClass in secItemClasses {
-            let spec: [String: Any] = [kSecClass as String: itemClass]
-            SecItemDelete(spec as CFDictionary)
+            
+            print(" [TerminateRestart] Clearing Keychain...")
+            // Clear Keychain if not preserved
+            if !preserveKeychain {
+                let secItemClasses: [CFString] = [
+                    kSecClassGenericPassword,
+                    kSecClassInternetPassword,
+                    kSecClassCertificate,
+                    kSecClassKey,
+                    kSecClassIdentity
+                ]
+                
+                for itemClass in secItemClasses {
+                    let spec: [String: Any] = [
+                        kSecClass as String: itemClass,
+                        kSecAttrAccessible as String: kSecAttrAccessibleAfterFirstUnlock
+                    ]
+                    let status = SecItemDelete(spec as CFDictionary)
+                    if status != errSecSuccess && status != errSecItemNotFound {
+                        print(" [TerminateRestart] Error clearing keychain item: \(status)")
+                    }
+                }
+            }
+            
+            print(" [TerminateRestart] Clearing files...")
+            // Clear files synchronously
+            do {
+                let fileManager = FileManager.default
+                
+                // Clear app's document directory
+                if let documentPath = fileManager.urls(for: .documentDirectory, in: .userDomainMask).first {
+                    let contents = try fileManager.contentsOfDirectory(at: documentPath, includingPropertiesForKeys: nil, options: [])
+                    for fileUrl in contents {
+                        do {
+                            try fileManager.removeItem(at: fileUrl)
+                        } catch {
+                            print(" [TerminateRestart] Error clearing document file \(fileUrl.lastPathComponent): \(error)")
+                        }
+                    }
+                }
+                
+                // Clear app's cache directory
+                if let cachePath = fileManager.urls(for: .cachesDirectory, in: .userDomainMask).first {
+                    let contents = try fileManager.contentsOfDirectory(at: cachePath, includingPropertiesForKeys: nil, options: [])
+                    for fileUrl in contents {
+                        do {
+                            try fileManager.removeItem(at: fileUrl)
+                        } catch {
+                            print(" [TerminateRestart] Error clearing cache file \(fileUrl.lastPathComponent): \(error)")
+                        }
+                    }
+                }
+                
+                // Clear app's temporary directory
+                let tempPath = NSTemporaryDirectory()
+                let contents = try fileManager.contentsOfDirectory(atPath: tempPath)
+                for file in contents {
+                    let filePath = (tempPath as NSString).appendingPathComponent(file)
+                    do {
+                        try fileManager.removeItem(atPath: filePath)
+                    } catch {
+                        print(" [TerminateRestart] Error clearing temp file \(file): \(error)")
+                    }
+                }
+            } catch {
+                print(" [TerminateRestart] Error accessing directories: \(error)")
+                clearError = error
+            }
+            
+            print(" [TerminateRestart] Clearing cookies and cache...")
+            // Clear cookies and cache
+            if let cookies = HTTPCookieStorage.shared.cookies {
+                for cookie in cookies {
+                    HTTPCookieStorage.shared.deleteCookie(cookie)
+                }
+            }
+            URLCache.shared.removeAllCachedResponses()
+            
+            print(" [TerminateRestart] All data clearing operations completed")
+            // Call completion on main queue
+            DispatchQueue.main.async {
+                completion(clearError == nil, clearError)
+            }
         }
     }
 }

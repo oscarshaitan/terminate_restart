@@ -16,6 +16,7 @@ import io.flutter.plugin.common.MethodChannel
 import io.flutter.plugin.common.MethodChannel.MethodCallHandler
 import io.flutter.plugin.common.MethodChannel.Result
 import kotlin.system.exitProcess
+import java.io.File
 
 /** TerminateRestartPlugin */
 class TerminateRestartPlugin : FlutterPlugin, MethodCallHandler, ActivityAware {
@@ -34,8 +35,15 @@ class TerminateRestartPlugin : FlutterPlugin, MethodCallHandler, ActivityAware {
         when (call.method) {
             "restartApp" -> {
                 val terminate = call.argument<Boolean>("terminate") ?: true
+                val clearData = call.argument<Boolean>("clearData") ?: false
+                val preserveUserDefaults = call.argument<Boolean>("preserveUserDefaults") ?: false
 
                 try {
+                    // Clear data if requested
+                    if (clearData) {
+                        clearAppData(preserveUserDefaults)
+                    }
+
                     // Restart the app
                     if (terminate) {
                         restartAppWithTerminate(result)
@@ -48,6 +56,54 @@ class TerminateRestartPlugin : FlutterPlugin, MethodCallHandler, ActivityAware {
                 }
             }
             else -> result.notImplemented()
+        }
+    }
+
+    private fun clearAppData(preserveUserDefaults: Boolean) {
+        try {
+            Log.d(TAG, "Clearing app data (preserveUserDefaults: $preserveUserDefaults)")
+            
+            // Clear SharedPreferences if not preserved
+            if (!preserveUserDefaults) {
+                context.getSharedPreferences("FlutterSharedPreferences", Context.MODE_PRIVATE)
+                    .edit()
+                    .clear()
+                    .apply()
+                Log.d(TAG, "Cleared SharedPreferences")
+            }
+
+            // Clear app cache
+            context.cacheDir?.deleteRecursively()
+            context.externalCacheDir?.deleteRecursively()
+            Log.d(TAG, "Cleared cache directories")
+
+            // Clear app files
+            context.filesDir.listFiles()?.forEach { file ->
+                if (file.name != "shared_prefs" || !preserveUserDefaults) {
+                    file.deleteRecursively()
+                }
+            }
+            Log.d(TAG, "Cleared files directory")
+
+            // Clear external files
+            context.getExternalFilesDir(null)?.deleteRecursively()
+            Log.d(TAG, "Cleared external files")
+
+            // Clear databases
+            for (database in context.databaseList()) {
+                context.deleteDatabase(database)
+            }
+            Log.d(TAG, "Cleared databases")
+
+            // Clear WebView data
+            context.deleteDatabase("webview.db")
+            context.deleteDatabase("webviewCache.db")
+            File(context.filesDir.parent, "app_webview").deleteRecursively()
+            Log.d(TAG, "Cleared WebView data")
+
+        } catch (e: Exception) {
+            Log.e(TAG, "Error clearing app data", e)
+            throw e
         }
     }
 
