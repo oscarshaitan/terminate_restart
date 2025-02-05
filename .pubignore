@@ -1,0 +1,21 @@
+# Development
+.dart_tool/
+.packages
+.pub/
+build/
+coverage/
+doc/
+
+# IDE
+.idea/
+.vscode/
+*.iml
+
+# Flutter/Dart specific
+*.log
+.flutter-plugins
+.flutter-plugins-dependencies
+.metadata
+
+# Don't ignore example pubspec.lock
+!example/pubspec.lock

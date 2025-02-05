@@ -2,8 +2,6 @@
 
 [![pub package](https://img.shields.io/pub/v/terminate_restart.svg)](https://pub.dev/packages/terminate_restart)
 [![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](https://opensource.org/licenses/MIT)
-[![Build Status](https://github.com/sleem2012/terminate_restart/workflows/Flutter%20CI/badge.svg)](https://github.com/sleem2012/terminate_restart/actions)
-[![codecov](https://codecov.io/gh/sleem2012/terminate_restart/branch/main/graph/badge.svg)](https://codecov.io/gh/sleem2012/terminate_restart)
 [![likes](https://img.shields.io/pub/likes/terminate_restart)](https://pub.dev/packages/terminate_restart/score)
 [![popularity](https://img.shields.io/pub/popularity/terminate_restart)](https://pub.dev/packages/terminate_restart/score)
 [![pub points](https://img.shields.io/pub/points/terminate_restart)](https://pub.dev/packages/terminate_restart/score)
