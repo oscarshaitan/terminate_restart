@@ -3,8 +3,7 @@
 [![pub package](https://img.shields.io/pub/v/terminate_restart.svg)](https://pub.dev/packages/terminate_restart)
 [![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](https://opensource.org/licenses/MIT)
 [![likes](https://img.shields.io/pub/likes/terminate_restart)](https://pub.dev/packages/terminate_restart/score)
-[![popularity](https://img.shields.io/pub/popularity/terminate_restart)](https://pub.dev/packages/terminate_restart/score)
-[![pub points](https://img.shields.io/pub/points/terminate_restart)](https://pub.dev/packages/terminate_restart/score)
+
 
 A robust Flutter plugin for terminating and restarting your app with extensive customization options. Perfect for implementing dynamic updates, clearing app state, or refreshing your app's UI.
 
@@ -13,13 +12,13 @@ A robust Flutter plugin for terminating and restarting your app with extensive c
 ### Plugin in Action
 
 <div align="center">
-  <img src="https://raw.githubusercontent.com/sleem2012/terminate_restart/main/.github/assets/demo.gif" alt="Plugin Demo" width="300"/>
+  <img src="https://github.com/sleem2012/terminate_restart/blob/main/.github/assets/demo.gif?raw=true" alt="Plugin Demo" width="300"/>
 </div>
 
 ### Clean & Simple Interface
 
 <div align="center">
-  <img src="https://raw.githubusercontent.com/sleem2012/terminate_restart/main/.github/assets/screenshot.png" alt="Plugin Interface" width="300"/>
+  <img src="https://github.com/sleem2012/terminate_restart/blob/main/.github/assets/screenshot.png?raw=true" alt="Plugin Interface" width="300"/>
 </div>
 
 The demo showcases:
