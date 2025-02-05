@@ -13,13 +13,13 @@ A robust Flutter plugin for terminating and restarting your app with extensive c
 ### Plugin in Action
 
 <div align="center">
-  <img src=".github/assets/demo.gif" alt="Plugin Demo" width="300"/>
+  <img src="https://raw.githubusercontent.com/sleem2012/terminate_restart/main/.github/assets/demo.gif" alt="Plugin Demo" width="300"/>
 </div>
 
 ### Clean & Simple Interface
 
 <div align="center">
-  <img src=".github/assets/screenshot.png" alt="Plugin Interface" width="300"/>
+  <img src="https://raw.githubusercontent.com/sleem2012/terminate_restart/main/.github/assets/screenshot.png" alt="Plugin Interface" width="300"/>
 </div>
 
 The demo showcases:
