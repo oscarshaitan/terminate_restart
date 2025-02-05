@@ -2,6 +2,8 @@
 
 [![pub package](https://img.shields.io/pub/v/terminate_restart.svg)](https://pub.dev/packages/terminate_restart)
 [![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](https://opensource.org/licenses/MIT)
+[![Build Status](https://github.com/sleem2012/terminate_restart/workflows/Flutter%20CI/badge.svg)](https://github.com/sleem2012/terminate_restart/actions)
+[![codecov](https://codecov.io/gh/sleem2012/terminate_restart/branch/main/graph/badge.svg)](https://codecov.io/gh/sleem2012/terminate_restart)
 [![likes](https://img.shields.io/pub/likes/terminate_restart)](https://pub.dev/packages/terminate_restart/score)
 [![popularity](https://img.shields.io/pub/popularity/terminate_restart)](https://pub.dev/packages/terminate_restart/score)
 [![pub points](https://img.shields.io/pub/points/terminate_restart)](https://pub.dev/packages/terminate_restart/score)
@@ -42,7 +44,7 @@ dependencies:
   terminate_restart: ^1.0.0
 ```
 
-## 🚀 Usage
+## 🚀 Getting Started
 
 ### Basic Usage
 
@@ -104,119 +106,46 @@ try {
 }
 ```
 
-### Complete Example with State Management
+## 📱 Screenshots
 
-```dart
-class _MyHomePageState extends State<MyHomePage> {
-  // Store persistent data
-  late SharedPreferences _prefs;
-  int _counter = 0;
-  
-  @override
-  void initState() {
-    super.initState();
-    _loadCounter();
-  }
-  
-  Future<void> _loadCounter() async {
-    _prefs = await SharedPreferences.getInstance();
-    setState(() {
-      _counter = _prefs.getInt('counter') ?? 0;
-    });
-  }
-  
-  Future<void> _incrementCounter() async {
-    setState(() {
-      _counter++;
-    });
-    await _prefs.setInt('counter', _counter);
-  }
-  
-  Future<void> _restartApp() async {
-    final bool confirmed = await showDialog<bool>(
-      context: context,
-      builder: (context) => AlertDialog(
-        title: Text('Restart App'),
-        content: Text('Do you want to clear data and restart?'),
-        actions: [
-          TextButton(
-            onPressed: () => Navigator.pop(context, false),
-            child: Text('Cancel'),
-          ),
-          TextButton(
-            onPressed: () => Navigator.pop(context, true),
-            child: Text('Yes, Restart'),
-          ),
-        ],
-      ),
-    ) ?? false;
-    
-    if (confirmed) {
-      await TerminateRestart.restartApp(
-        clearData: true,
-        preserveKeychain: true,
-        terminate: true,
-      );
-    }
-  }
-  
-  @override
-  Widget build(BuildContext context) {
-    return Scaffold(
-      appBar: AppBar(title: Text('Terminate Restart Demo')),
-      body: Center(
-        child: Column(
-          mainAxisAlignment: MainAxisAlignment.center,
-          children: [
-            Text('Counter: $_counter'),
-            ElevatedButton(
-              onPressed: _incrementCounter,
-              child: Text('Increment'),
-            ),
-            ElevatedButton(
-              onPressed: _restartApp,
-              child: Text('Clear & Restart'),
-            ),
-          ],
-        ),
-      ),
-    );
-  }
-}
-```
+<div style="display: flex; flex-direction: row;">
+  <img src="screenshots/basic.png" width="250" alt="Basic Usage">
+  <img src="screenshots/dialog.png" width="250" alt="Confirmation Dialog">
+  <img src="screenshots/data_clearing.png" width="250" alt="Data Clearing">
+</div>
 
-## 📚 API Reference
+## 📚 Complete Example
 
-### TerminateRestart.restartApp()
+Check out our [example app](example) for a full demonstration of all features, including:
 
-Main method to restart your app with various options:
-
-| Parameter | Type | Default | Description |
-|-----------|------|---------|-------------|
-| context | BuildContext? | null | Required for confirmation dialog |
-| mode | RestartMode | immediate | Choose between immediate/confirmation |
-| clearData | bool | false | Whether to clear app data |
-| preserveKeychain | bool | false | Keep keychain data when clearing |
-| preserveUserDefaults | bool | false | Keep user defaults when clearing |
-| terminate | bool | true | Full process termination vs UI refresh |
-| dialogTitle | String? | null | Custom title for confirmation dialog |
-| dialogMessage | String? | null | Custom message for confirmation dialog |
-| restartNowText | String? | null | Custom text for restart now button |
-| restartLaterText | String? | null | Custom text for restart later button |
-| cancelText | String? | null | Custom text for cancel button |
-
-Returns `Future<bool>` indicating success or failure.
+- Basic UI/Process restart
+- Data clearing with preservation options
+- Custom confirmation dialogs
+- Error handling
+- State management
+- Platform-specific features
 
 ## 🔧 Platform-Specific Details
 
-### Android
+### Android Implementation
 
-- Uses `Process.killProcess()` for clean termination
-- Proper activity stack handling with Intent flags
-- Smart SharedPreferences management
-- Handles all app data directories
+The Android implementation uses a combination of techniques to ensure reliable app restart:
 
-### iOS (Coming Soon)
+```kotlin
+// Activity recreation (UI-only restart)
+currentActivity.recreate()
+
+// Full process termination
+Process.killProcess(Process.myPid())
+exitProcess(0)
+
+// Smart Intent handling
+intent.addFlags(Intent.FLAG_ACTIVITY_NEW_TASK or Intent.FLAG_ACTIVITY_CLEAR_TASK)
+```
+
+### iOS Implementation (Coming Soon)
+
+The iOS implementation will provide:
 
 - Clean process termination
 - State preservation options
@@ -225,13 +154,21 @@ Returns `Future<bool>` indicating success or failure.
 
 ## 🤝 Contributing
 
-1. Fork it
+We welcome contributions! Here's how you can help:
+
+1. Fork the repository
 2. Create your feature branch (`git checkout -b feature/amazing`)
 3. Commit your changes (`git commit -am 'Add amazing feature'`)
 4. Push to the branch (`git push origin feature/amazing`)
-5. Create a Pull Request
+5. Open a Pull Request
 
-## 📝 License
+Please read our [Contributing Guidelines](CONTRIBUTING.md) for details.
+
+## 📋 Changelog
+
+See [CHANGELOG.md](CHANGELOG.md) for a list of all changes and updates.
+
+## 📄 License
 
 This project is licensed under the MIT License - see the [LICENSE](LICENSE) file for details.
 
@@ -242,7 +179,7 @@ Made with ❤️ by Ahmed Sleem
 ---
 
 <p align="center">
-  <a href="https://github.com/ahmedsleem/terminate_restart">GitHub</a> •
+  <a href="https://github.com/sleem2012/terminate_restart">GitHub</a> •
   <a href="https://pub.dev/packages/terminate_restart">pub.dev</a> •
-  <a href="https://github.com/ahmedsleem/terminate_restart/issues">Issues</a>
+  <a href="https://github.com/sleem2012/terminate_restart/issues">Issues</a>
 </p>
