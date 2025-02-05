@@ -64,7 +64,7 @@ Add this to your package's `pubspec.yaml` file:
 
 ```yaml
 dependencies:
-  terminate_restart: ^1.0.3
+  terminate_restart: ^1.0.4
 ```
 
 ### Permissions
@@ -85,16 +85,29 @@ No special permissions are required for either Android or iOS! The plugin uses o
 
 ### Initialization
 
-Initialize the plugin in your `main.dart` to handle UI-only restarts properly:
+Initialize the plugin in your `main.dart`:
 
 ```dart
 void main() {
-  TerminateRestart.initialize(
+  // Initialize the plugin with root reset handler
+  TerminateRestart.instance.initialize(
     onRootReset: () {
-      // Reset your app's navigation to root
+      // This will be called during UI-only restarts
+      // Reset your navigation to root
+      // Clear navigation history
       // Reset any global state
-      // Clear navigation stack
-      // This is called during UI-only restarts
+      
+      // Example with GetX:
+      Get.reset();
+      
+      // Example with Provider:
+      context.read<YourProvider>().reset();
+      
+      // Example with Bloc:
+      context.read<YourBloc>().add(ResetEvent());
+      
+      // Example navigation reset:
+      Navigator.of(context).popUntil((route) => route.isFirst);
     },
   );
   
@@ -108,7 +121,7 @@ The plugin offers three restart modes:
 
 1. **Full Restart (with termination)**
 ```dart
-await TerminateRestart.restartApp(
+await TerminateRestart.instance.restartApp(
   options: TerminateRestartOptions(
     terminate: true,  // Fully terminate and restart
   ),
@@ -117,20 +130,16 @@ await TerminateRestart.restartApp(
 
 2. **UI-Only Restart (maintains connections)**
 ```dart
-await TerminateRestart.restartApp(
+await TerminateRestart.instance.restartApp(
   options: TerminateRestartOptions(
     terminate: false,  // UI-only restart
   ),
 );
 ```
-- Resets app to root state
-- Maintains WebSocket/HTTP connections
-- Preserves background tasks
-- Smooth transition animation
 
 3. **Restart with Data Clearing**
 ```dart
-await TerminateRestart.restartApp(
+await TerminateRestart.instance.restartApp(
   options: TerminateRestartOptions(
     terminate: true,
     clearData: true,
@@ -156,7 +165,7 @@ await TerminateRestart.restartApp(
 1. **Theme Switching**
 ```dart
 // Use UI-only restart to switch themes smoothly
-await TerminateRestart.restartApp(
+await TerminateRestart.instance.restartApp(
   options: TerminateRestartOptions(
     terminate: false,
   ),
@@ -166,7 +175,7 @@ await TerminateRestart.restartApp(
 2. **Language Change**
 ```dart
 // Use UI-only restart to apply new locale
-await TerminateRestart.restartApp(
+await TerminateRestart.instance.restartApp(
   options: TerminateRestartOptions(
     terminate: false,
   ),
@@ -176,7 +185,7 @@ await TerminateRestart.restartApp(
 3. **User Logout**
 ```dart
 // Full restart with data clearing
-await TerminateRestart.restartApp(
+await TerminateRestart.instance.restartApp(
   options: TerminateRestartOptions(
     terminate: true,
     clearData: true,
@@ -188,7 +197,7 @@ await TerminateRestart.restartApp(
 4. **App Update**
 ```dart
 // Full restart to apply updates
-await TerminateRestart.restartApp(
+await TerminateRestart.instance.restartApp(
   options: TerminateRestartOptions(
     terminate: true,
   ),
@@ -211,7 +220,7 @@ await TerminateRestart.restartApp(
 3. **Error Handling**
 ```dart
 try {
-  await TerminateRestart.restartApp(
+  await TerminateRestart.instance.restartApp(
     options: TerminateRestartOptions(
       terminate: false,
     ),
@@ -243,29 +252,36 @@ try {
 1. **After Dynamic Updates**
    ```dart
    // After downloading new assets/code
-   await TerminateRestart.restartApp(
-     context: context,
-     mode: RestartMode.withConfirmation,
-     dialogTitle: 'Update Ready',
-     dialogMessage: 'Restart to apply updates?',
+   await TerminateRestart.instance.restartApp(
+     options: TerminateRestartOptions(
+       terminate: true,
+       mode: RestartMode.withConfirmation,
+       dialogTitle: 'Update Ready',
+       dialogMessage: 'Restart to apply updates?',
+     ),
    );
    ```
 
 2. **Clearing Cache**
    ```dart
    // Clear app data but preserve important settings
-   await TerminateRestart.restartApp(
-     clearData: true,
-     preserveKeychain: true,
-     preserveUserDefaults: true,
+   await TerminateRestart.instance.restartApp(
+     options: TerminateRestartOptions(
+       terminate: true,
+       clearData: true,
+       preserveKeychain: true,
+       preserveUserDefaults: true,
+     ),
    );
    ```
 
 3. **Quick UI Refresh**
    ```dart
    // Refresh UI without full restart
-   await TerminateRestart.restartApp(
-     terminate: false,
+   await TerminateRestart.instance.restartApp(
+     options: TerminateRestartOptions(
+       terminate: false,
+     ),
    );
    ```
 
@@ -385,6 +401,7 @@ The iOS implementation provides:
 ## 👨‍💻 Author
 
 Made with ❤️ by Ahmed Sleem
+[LinkedIn](https://www.linkedin.com/in/sleem98/) • [GitHub](https://github.com/sleem2012/terminate_restart) • [pub.dev](https://pub.dev/packages/terminate_restart)
 
 ---
 
@@ -405,8 +422,10 @@ class ThemeManager {
     await prefs.setString('theme', 'dark');
     
     // Restart UI only to apply theme
-    await TerminateRestart.restartApp(
-      terminate: false,
+    await TerminateRestart.instance.restartApp(
+      options: TerminateRestartOptions(
+        terminate: false,
+      ),
     );
   }
 }
@@ -421,13 +440,15 @@ class LocalizationManager {
     await prefs.setString('locale', locale);
     
     // Show confirmation with custom message
-    await TerminateRestart.restartApp(
-      context: context,
-      mode: RestartMode.withConfirmation,
-      dialogTitle: 'Language Changed',
-      dialogMessage: 'Restart app to apply new language?',
-      restartNowText: 'Restart Now',
-      restartLaterText: 'Later',
+    await TerminateRestart.instance.restartApp(
+      options: TerminateRestartOptions(
+        terminate: true,
+        mode: RestartMode.withConfirmation,
+        dialogTitle: 'Language Changed',
+        dialogMessage: 'Restart app to apply new language?',
+        restartNowText: 'Restart Now',
+        restartLaterText: 'Later',
+      ),
     );
   }
 }
@@ -443,14 +464,16 @@ class UpdateManager {
       await downloadUpdate();
       
       // Clear cache but preserve settings
-      await TerminateRestart.restartApp(
-        context: context,
-        mode: RestartMode.withConfirmation,
-        clearData: true,
-        preserveUserDefaults: true,
-        preserveKeychain: true,
-        dialogTitle: 'Update Ready',
-        dialogMessage: 'Restart to complete update?',
+      await TerminateRestart.instance.restartApp(
+        options: TerminateRestartOptions(
+          terminate: true,
+          mode: RestartMode.withConfirmation,
+          clearData: true,
+          preserveUserDefaults: true,
+          preserveKeychain: true,
+          dialogTitle: 'Update Ready',
+          dialogMessage: 'Restart to complete update?',
+        ),
       );
     } catch (e) {
       print('Update failed: $e');
@@ -466,10 +489,12 @@ class AuthManager {
   static Future<void> logout() async {
     try {
       // Clear all data except keychain
-      await TerminateRestart.restartApp(
-        clearData: true,
-        preserveKeychain: true,
-        terminate: true, // Full restart for security
+      await TerminateRestart.instance.restartApp(
+        options: TerminateRestartOptions(
+          clearData: true,
+          preserveKeychain: true,
+          terminate: true, // Full restart for security
+        ),
       );
     } catch (e) {
       print('Logout failed: $e');
@@ -496,9 +521,11 @@ class AuthManager {
 1. **Context Error**
 ```dart
 try {
-  await TerminateRestart.restartApp(
-    context: context,
-    mode: RestartMode.withConfirmation,
+  await TerminateRestart.instance.restartApp(
+    options: TerminateRestartOptions(
+      terminate: true,
+      mode: RestartMode.withConfirmation,
+    ),
   );
 } on ArgumentError catch (e) {
   // Handle invalid or disposed context
@@ -511,9 +538,12 @@ try {
 2. **Data Clearing Error**
 ```dart
 try {
-  await TerminateRestart.restartApp(
-    clearData: true,
-    preserveKeychain: true,
+  await TerminateRestart.instance.restartApp(
+    options: TerminateRestartOptions(
+      terminate: true,
+      clearData: true,
+      preserveKeychain: true,
+    ),
   );
 } on PlatformException catch (e) {
   // Handle platform-specific errors
@@ -526,7 +556,11 @@ try {
 3. **Timeout Handling**
 ```dart
 try {
-  await TerminateRestart.restartApp().timeout(
+  await TerminateRestart.instance.restartApp(
+    options: TerminateRestartOptions(
+      terminate: true,
+    ),
+  ).timeout(
     Duration(seconds: 5),
     onTimeout: () {
       throw TimeoutException('Restart timed out');

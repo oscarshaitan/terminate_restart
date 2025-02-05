@@ -1,5 +1,6 @@
 import UIKit
 import Flutter
+import terminate_restart
 
 @main
 @objc class AppDelegate: FlutterAppDelegate {

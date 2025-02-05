@@ -99,3 +99,28 @@ Initial release with the following features:
 - Fixed UI-only restart not properly resetting to root
 - Fixed Android activity recreation issues
 - Fixed iOS view controller transition glitches
+
+## 1.0.4
+
+* Added `TerminateRestart.instance` singleton pattern for better state management
+* Enhanced initialization with comprehensive state reset examples
+* Added support for different state management solutions (GetX, Provider, Bloc)
+* Improved documentation with real-world examples
+* Updated all code examples to use the new instance pattern
+* Fixed UI-only restart implementation
+* Added proper error handling for timeouts and platform-specific errors
+
+* Enhanced Android restart functionality:
+  * Using `makeRestartActivityTask` for more reliable app restart
+  * Improved activity recreation and state management
+  * Better handling of process termination
+
+* Improved iOS implementation:
+  * Better URL scheme handling for app restart
+  * Enhanced view controller management
+  * Proper state preservation during restarts
+
+* General improvements:
+  * More reliable UI-only restart on both platforms
+  * Better error handling and logging
+  * Code cleanup and documentation updates

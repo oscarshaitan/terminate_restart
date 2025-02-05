@@ -1,5 +1,29 @@
 import 'package:flutter/material.dart';
+import 'package:flutter/services.dart';
 import '../terminate_restart_platform_interface.dart';
+
+/// Options for restarting the app
+class TerminateRestartOptions {
+  /// Whether to terminate the app or just restart the UI
+  final bool terminate;
+  
+  /// Whether to clear app data
+  final bool clearData;
+  
+  /// Whether to preserve keychain data
+  final bool preserveKeychain;
+  
+  /// Whether to preserve user defaults
+  final bool preserveUserDefaults;
+
+  /// Constructor
+  const TerminateRestartOptions({
+    this.terminate = true,
+    this.clearData = false,
+    this.preserveKeychain = false,
+    this.preserveUserDefaults = false,
+  });
+}
 
 /// Enum to specify the restart mode
 enum RestartMode {
@@ -12,23 +36,25 @@ enum RestartMode {
 
 /// The main plugin class for restarting Flutter apps
 class TerminateRestart {
-  /// Private constructor to prevent instantiation
+  static TerminateRestart? _instance;
+  
+  /// Get the singleton instance
+  static TerminateRestart get instance {
+    _instance ??= TerminateRestart._();
+    return _instance!;
+  }
+
+  /// Private constructor
   TerminateRestart._();
 
-  /// The singleton instance of the plugin
-  static final instance = TerminateRestart._();
-
-  static const MethodChannel _channel =
-      MethodChannel('com.ahmedsleem.terminate_restart/restart');
+  final MethodChannel _internalChannel =
+      const MethodChannel('com.ahmedsleem.terminate_restart/internal');
   
-  static const MethodChannel _internalChannel =
-      MethodChannel('com.ahmedsleem.terminate_restart/internal');
-  
-  static bool _initialized = false;
-  static VoidCallback? _onRootReset;
+  bool _initialized = false;
+  VoidCallback? _onRootReset;
 
   /// Initialize the plugin and set up internal handlers
-  static void initialize({VoidCallback? onRootReset}) {
+  void initialize({VoidCallback? onRootReset}) {
     if (!_initialized) {
       _onRootReset = onRootReset;
       _internalChannel.setMethodCallHandler(_handleInternalMessages);
@@ -36,7 +62,7 @@ class TerminateRestart {
     }
   }
 
-  static Future<dynamic> _handleInternalMessages(MethodCall call) async {
+  Future<dynamic> _handleInternalMessages(MethodCall call) async {
     switch (call.method) {
       case 'resetToRoot':
         _onRootReset?.call();
@@ -45,81 +71,19 @@ class TerminateRestart {
   }
 
   /// Restarts the app with the given options.
-  ///
-  /// [context] is required when [mode] is [RestartMode.withConfirmation].
-  /// [clearData] determines whether to clear app data during restart.
-  /// [preserveKeychain] determines whether to keep keychain data when clearing.
-  /// [preserveUserDefaults] determines whether to keep user defaults when clearing.
-  /// [terminate] determines whether to do a full process termination vs UI refresh.
-  /// [dialogTitle] is the title for the confirmation dialog.
-  /// [dialogMessage] is the message for the confirmation dialog.
-  /// [restartNowText] is the text for the restart now button.
-  /// [restartLaterText] is the text for the restart later button.
-  /// [cancelText] is the text for the cancel button.
-  ///
-  /// Returns true if the restart was successful, false otherwise.
-  static Future<bool> restartApp({
-    BuildContext? context,
-    RestartMode mode = RestartMode.immediate,
-    bool clearData = false,
-    bool preserveKeychain = false,
-    bool preserveUserDefaults = false,
-    bool terminate = true,
-    String? dialogTitle,
-    String? dialogMessage,
-    String? restartNowText,
-    String? restartLaterText,
-    String? cancelText,
+  Future<bool> restartApp({
+    required TerminateRestartOptions options,
   }) async {
-    // Validate context when needed
-    if (mode == RestartMode.withConfirmation &&
-        (context == null || !context.mounted)) {
-      throw ArgumentError(
-        'context is required when mode is RestartMode.withConfirmation',
-      );
-    }
-
-    // Show confirmation dialog if needed
-    if (mode == RestartMode.withConfirmation && context != null) {
-      final bool? shouldRestart = await showDialog<bool>(
-        context: context,
-        builder: (context) => AlertDialog(
-          title: Text(dialogTitle ?? 'Confirm Restart'),
-          content: Text(dialogMessage ?? 'Do you want to restart the app?'),
-          actions: [
-            TextButton(
-              onPressed: () => Navigator.of(context).pop(false),
-              child: Text(cancelText ?? 'Cancel'),
-            ),
-            TextButton(
-              onPressed: () => Navigator.of(context).pop(null),
-              child: Text(restartLaterText ?? 'Later'),
-            ),
-            TextButton(
-              onPressed: () => Navigator.of(context).pop(true),
-              child: Text(restartNowText ?? 'Restart Now'),
-            ),
-          ],
-        ),
-      );
-
-      // Return false if user cancelled or postponed
-      if (shouldRestart != true) {
-        return false;
-      }
-    }
-
     try {
-      debugPrint('🔄 [TerminateRestart] Preparing for restart...');
       return await TerminateRestartPlatform.instance.restartApp(
-        clearData: clearData,
-        preserveKeychain: preserveKeychain,
-        preserveUserDefaults: preserveUserDefaults,
-        terminate: terminate,
+        clearData: options.clearData,
+        preserveKeychain: options.preserveKeychain,
+        preserveUserDefaults: options.preserveUserDefaults,
+        terminate: options.terminate,
       );
     } catch (e) {
-      debugPrint('🔄 [TerminateRestart] Error restarting app: $e');
-      rethrow;
+      debugPrint('Error restarting app: $e');
+      return false;
     }
   }
 }

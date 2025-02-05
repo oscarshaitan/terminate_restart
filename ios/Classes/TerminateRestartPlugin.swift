@@ -10,7 +10,7 @@ public class TerminateRestartPlugin: NSObject, FlutterPlugin {
     
     public func handle(_ call: FlutterMethodCall, result: @escaping FlutterResult) {
         switch call.method {
-        case "restartApp":
+        case "restart":
             handleRestartApp(call, result: result)
         default:
             result(FlutterMethodNotImplemented)
