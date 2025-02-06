@@ -1,21 +1,13 @@
 import 'package:flutter/material.dart';
+import 'package:flutter_animate/flutter_animate.dart';
+import 'package:font_awesome_flutter/font_awesome_flutter.dart';
+import 'package:google_fonts/google_fonts.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 import 'package:terminate_restart/terminate_restart.dart';
 
 Future<void> main() async {
-  // Initialize Flutter bindings
   WidgetsFlutterBinding.ensureInitialized();
-  
-  // Initialize the plugin with root reset handler
-  TerminateRestart.instance.initialize(
-    onRootReset: () {
-      // This will be called during UI-only restarts
-      // Reset your navigation to root
-      // Clear navigation history
-      // Reset any global state
-    },
-  );
-  
+  TerminateRestart.instance.initialize();
   runApp(const MyApp());
 }
 
@@ -27,352 +19,448 @@ class MyApp extends StatelessWidget {
     return MaterialApp(
       title: 'Terminate Restart Example',
       theme: ThemeData(
-        colorScheme: ColorScheme.fromSeed(seedColor: Colors.deepPurple),
+        colorScheme: ColorScheme.fromSeed(
+          seedColor: const Color(0xFF1E1E1E),
+          brightness: Brightness.light,
+        ),
         useMaterial3: true,
+        textTheme: GoogleFonts.interTextTheme(),
       ),
-      home: const MyHomePage(title: 'Terminate Restart Example'),
+      darkTheme: ThemeData(
+        colorScheme: ColorScheme.fromSeed(
+          seedColor: const Color(0xFF1E1E1E),
+          brightness: Brightness.dark,
+        ),
+        useMaterial3: true,
+        textTheme: GoogleFonts.interTextTheme(ThemeData.dark().textTheme),
+      ),
+      initialRoute: '/splash',
+      routes: {
+        '/splash': (context) => const SplashScreen(),
+        '/home': (context) => const MyHomePage(title: 'Terminate Restart Demo'),
+      },
+    );
+  }
+}
+
+class SplashScreen extends StatefulWidget {
+  const SplashScreen({super.key});
+
+  @override
+  State<SplashScreen> createState() => _SplashScreenState();
+}
+
+class _SplashScreenState extends State<SplashScreen> {
+  @override
+  void initState() {
+    super.initState();
+    Future.delayed(const Duration(seconds: 2), () {
+      if (mounted) {
+        Navigator.of(context).pushReplacementNamed('/home');
+      }
+    });
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    return Scaffold(
+      backgroundColor: const Color(0xFF1E1E1E),
+      body: Center(
+        child: Column(
+          mainAxisAlignment: MainAxisAlignment.center,
+          children: [
+            Container(
+              padding: const EdgeInsets.all(24),
+              decoration: BoxDecoration(
+                shape: BoxShape.circle,
+                color: const Color(0xFF2A2A2A),
+                border: Border.all(
+                  color: const Color(0xFF3A3A3A),
+                  width: 2,
+                ),
+              ),
+              child: const FaIcon(
+                FontAwesomeIcons.arrowsRotate,
+                size: 48,
+                color: Colors.greenAccent,
+              ),
+            )
+                .animate(
+                  onPlay: (controller) => controller.repeat(),
+                )
+                .rotate(
+                  duration: 2.seconds,
+                  curve: Curves.easeInOut,
+                ),
+            const SizedBox(height: 24),
+            Text(
+              'TERMINATE RESTART',
+              style: GoogleFonts.inter(
+                fontSize: 16,
+                fontWeight: FontWeight.w600,
+                color: Colors.white,
+                letterSpacing: 2,
+              ),
+            ).animate().fadeIn(
+                  duration: 800.milliseconds,
+                  curve: Curves.easeOut,
+                ),
+          ],
+        ),
+      ),
     );
   }
 }
 
 class MyHomePage extends StatefulWidget {
   const MyHomePage({super.key, required this.title});
-
   final String title;
 
   @override
   State<MyHomePage> createState() => _MyHomePageState();
 }
 
-class _MyHomePageState extends State<MyHomePage> with WidgetsBindingObserver {
+class _MyHomePageState extends State<MyHomePage> {
+  int _counter = 0;
   bool _clearData = false;
-  bool _preserveKeychain = false;
-  bool _preserveUserDefaults = false;
-  final bool _terminate = true;
-  
-  // Persistent data example
-  int _persistentCounter = 0;
-  String? _lastRestartTime;
-  SharedPreferences? _prefsInstance;
-  bool _isLoading = false;
 
   @override
   void initState() {
     super.initState();
-    WidgetsBinding.instance.addObserver(this);
-    _initializePrefs();
+    _loadCounter();
+    _initializeCounter();
   }
 
-  @override
-  void dispose() {
-    WidgetsBinding.instance.removeObserver(this);
-    super.dispose();
-  }
-
-  Future<void> _initializePrefs() async {
-    if (!mounted) return;
-
+  Future<void> _loadCounter() async {
+    final prefs = await SharedPreferences.getInstance();
     setState(() {
-      _isLoading = true;
+      _counter = prefs.getInt('counter') ?? 0;
     });
+  }
 
-    try {
-      final prefs = await SharedPreferences.getInstance();
-      if (!mounted) return;
-
-      setState(() {
-        _prefsInstance = prefs;
-        _persistentCounter = prefs.getInt('counter') ?? 0;
-        _lastRestartTime = prefs.getString('lastRestart');
-        _isLoading = false;
-      });
-    } catch (e) {
-      debugPrint('Error initializing prefs: $e');
-      if (mounted) {
-        setState(() {
-          _isLoading = false;
-        });
-      }
+  Future<void> _initializeCounter() async {
+    final prefs = await SharedPreferences.getInstance();
+    if (prefs.getInt('counter') == null) {
+      await prefs.setInt('counter', 0);
     }
   }
 
   Future<void> _incrementCounter() async {
-    if (_prefsInstance == null) return;
-    
-    try {
-      setState(() {
-        _persistentCounter++;
-      });
-      
-      await _prefsInstance!.setInt('counter', _persistentCounter);
-      await _prefsInstance!.setString('lastRestart', DateTime.now().toString());
-    } catch (e) {
-      debugPrint('Error incrementing counter: $e');
-    }
+    final prefs = await SharedPreferences.getInstance();
+    setState(() {
+      _counter++;
+      prefs.setInt('counter', _counter);
+    });
   }
 
-  String _getDataClearingMessage() {
-    if (!_clearData) return '';
-    final preserving = <String>[];
-    if (_preserveKeychain) preserving.add('keychain');
-    if (_preserveUserDefaults) preserving.add('user defaults');
-    
-    if (preserving.isEmpty) {
-      return '\n\nAll app data will be cleared.';
-    } else {
-      return '\n\nApp data will be cleared except: ${preserving.join(' and ')}.';
-    }
+  Future<void> _handleUIRestart() async {
+    await TerminateRestart.instance.restartApp(
+      options: TerminateRestartOptions(
+        terminate: false,
+        clearData: _clearData,
+      ),
+    );
   }
 
-  Future<void> _restartApp({
-    required RestartMode mode,
-    required String buttonLabel,
-    bool? terminate,
-  }) async {
-    if (!mounted) return;
+  Future<void> _handleTerminateRestart() async {
+    await TerminateRestart.instance.restartApp(
+      options: TerminateRestartOptions(
+        terminate: true,
+        clearData: _clearData,
+      ),
+    );
+  }
 
-    try {
-      // Show confirmation dialog if needed
-      if (mode == RestartMode.withConfirmation) {
-        final confirmed = await showDialog<bool>(
-          context: context,
-          builder: (context) => AlertDialog(
-            title: const Text('Restart App'),
-            content: Text('Are you sure you want to restart the app?${_getDataClearingMessage()}'),
-            actions: [
-              TextButton(
-                onPressed: () => Navigator.pop(context, false),
-                child: const Text('Cancel'),
-              ),
-              TextButton(
-                onPressed: () => Navigator.pop(context, true),
-                child: Text(buttonLabel),
-              ),
-            ],
-          ),
-        );
-
-        if (confirmed != true) return;
-      }
-
-      // Save restart time before restarting
-      if (_prefsInstance != null) {
-        await _prefsInstance!.setString('lastRestart', DateTime.now().toString());
-      }
-
-      // Restart the app with new options format
-      if (!mounted) return;
-      
-      final result = await TerminateRestart.instance.restartApp(
-        options: TerminateRestartOptions(
-          terminate: terminate ?? _terminate,
-          clearData: _clearData,
-          preserveKeychain: _preserveKeychain,
-          preserveUserDefaults: _preserveUserDefaults,
+  Future<void> _handleConfirmationRestart() async {
+    final confirmed = await showDialog<bool>(
+      context: context,
+      builder: (context) => AlertDialog(
+        backgroundColor: const Color(0xFF2A2A2A),
+        icon: const FaIcon(
+          FontAwesomeIcons.triangleExclamation,
+          size: 32,
+          color: Colors.greenAccent,
         ),
-      );
+        title: Text(
+          'Confirm Restart',
+          style: GoogleFonts.inter(
+            color: Colors.white,
+            fontWeight: FontWeight.w600,
+          ),
+        ),
+        content: Text(
+          'Are you sure you want to restart the app? This will close the current instance and start a new one.',
+          style: GoogleFonts.inter(
+            color: Colors.grey[400],
+          ),
+        ),
+        actions: [
+          TextButton.icon(
+            onPressed: () => Navigator.pop(context, false),
+            icon: const FaIcon(
+              FontAwesomeIcons.xmark,
+              size: 16,
+              color: Colors.grey,
+            ),
+            label: Text(
+              'CANCEL',
+              style: GoogleFonts.inter(
+                color: Colors.grey,
+                fontWeight: FontWeight.w500,
+                letterSpacing: 1,
+              ),
+            ),
+          ),
+          FilledButton.icon(
+            onPressed: () => Navigator.pop(context, true),
+            icon: const FaIcon(
+              FontAwesomeIcons.arrowsRotate,
+              size: 16,
+            ),
+            label: Text(
+              'RESTART',
+              style: GoogleFonts.inter(
+                fontWeight: FontWeight.w500,
+                letterSpacing: 1,
+              ),
+            ),
+            style: FilledButton.styleFrom(
+              backgroundColor: Colors.greenAccent,
+              foregroundColor: Colors.black,
+            ),
+          ),
+        ],
+      ),
+    );
 
-      if (!result && mounted) {
-        ScaffoldMessenger.of(context).showSnackBar(
-          const SnackBar(content: Text('Failed to restart app')),
-        );
-      }
-    } catch (e) {
-      debugPrint('Error restarting app: $e');
-      if (mounted) {
-        ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(content: Text('Error: $e')),
-        );
-      }
+    if (confirmed == true) {
+      await _handleTerminateRestart();
     }
   }
 
   @override
   Widget build(BuildContext context) {
+    final colorScheme = Theme.of(context).colorScheme;
     return Scaffold(
+      backgroundColor: const Color(0xFF1E1E1E),
       appBar: AppBar(
-        backgroundColor: Theme.of(context).colorScheme.inversePrimary,
-        title: Text(widget.title),
+        backgroundColor: const Color(0xFF1E1E1E),
+        title: Text(
+          widget.title.toUpperCase(),
+          style: GoogleFonts.inter(
+            fontWeight: FontWeight.w600,
+            color: Colors.white,
+            fontSize: 16,
+            letterSpacing: 1.2,
+          ),
+        ),
+        elevation: 0,
+        centerTitle: true,
       ),
-      body: _isLoading
-          ? const Center(child: CircularProgressIndicator())
-          : ListView(
-              padding: const EdgeInsets.all(16.0),
-              children: <Widget>[
-                // Persistent data example
-                Card(
-                  child: Padding(
-                    padding: const EdgeInsets.all(16.0),
-                    child: Column(
-                      crossAxisAlignment: CrossAxisAlignment.start,
-                      children: [
-                        const Text(
-                          'Persistent Data Example',
-                          style: TextStyle(
-                            fontSize: 18,
-                            fontWeight: FontWeight.bold,
-                          ),
-                        ),
-                        const SizedBox(height: 16),
-                        Row(
-                          children: [
-                            Expanded(
-                              child: Column(
-                                crossAxisAlignment: CrossAxisAlignment.start,
-                                children: [
-                                  Text(
-                                    'Counter: $_persistentCounter',
-                                    style: const TextStyle(fontSize: 16),
-                                  ),
-                                  if (_lastRestartTime != null) ...[
-                                    const SizedBox(height: 8),
-                                    Text(
-                                      'Last Restart: $_lastRestartTime',
-                                      style: const TextStyle(
-                                        fontSize: 12,
-                                        color: Colors.grey,
-                                      ),
-                                    ),
-                                  ],
-                                ],
-                              ),
-                            ),
-                            FilledButton.icon(
-                              onPressed: _incrementCounter,
-                              icon: const Icon(Icons.add),
-                              label: const Text('Increment'),
-                            ),
-                          ],
-                        ),
-                        const SizedBox(height: 8),
-                        Text(
-                          _preserveUserDefaults
-                              ? 'Counter will be preserved on restart'
-                              : 'Counter will be reset if data is cleared',
-                          style: TextStyle(
-                            fontSize: 12,
-                            color: _preserveUserDefaults ? Colors.green : Colors.red,
-                          ),
-                        ),
-                      ],
+      body: SafeArea(
+        child: SingleChildScrollView(
+          padding: const EdgeInsets.symmetric(horizontal: 20),
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              const SizedBox(height: 32),
+              // Counter Section
+              Center(
+                child: Container(
+                  height: 200,
+                  width: 200,
+                  decoration: BoxDecoration(
+                    shape: BoxShape.circle,
+                    color: const Color(0xFF2A2A2A),
+                    border: Border.all(
+                      color: const Color(0xFF3A3A3A),
+                      width: 2,
                     ),
                   ),
-                ),
-                const SizedBox(height: 16),
-                // Data clearing options
-                Card(
                   child: Column(
+                    mainAxisAlignment: MainAxisAlignment.center,
                     children: [
-                      const Padding(
-                        padding: EdgeInsets.all(16.0),
-                        child: Text(
-                          'Data Options',
-                          style: TextStyle(
-                            fontSize: 18,
-                            fontWeight: FontWeight.bold,
+                      Text(
+                        '$_counter',
+                        style: GoogleFonts.inter(
+                          fontSize: 48,
+                          fontWeight: FontWeight.bold,
+                          color: Colors.white,
+                        ),
+                      )
+                          .animate(
+                            onPlay: (controller) => controller.repeat(),
+                          )
+                          .shimmer(
+                            duration: 2.seconds,
+                            color: Colors.grey[800]!,
                           ),
+                      Text(
+                        'COUNTER',
+                        style: GoogleFonts.inter(
+                          fontSize: 12,
+                          fontWeight: FontWeight.w500,
+                          color: Colors.grey[400],
+                          letterSpacing: 2,
                         ),
                       ),
-                      SwitchListTile(
-                        title: const Text('Clear App Data'),
-                        subtitle:
-                            const Text('Clear app cache, files, and preferences'),
-                        value: _clearData,
-                        onChanged: (bool value) {
-                          setState(() {
-                            _clearData = value;
-                            if (!value) {
-                              _preserveKeychain = false;
-                              _preserveUserDefaults = false;
-                            }
-                          });
-                        },
-                      ),
-                      if (_clearData) ...[
-                        const Divider(),
-                        const Padding(
-                          padding:
-                              EdgeInsets.symmetric(horizontal: 16.0, vertical: 8.0),
-                          child: Text(
-                            'Preserve Options',
-                            style: TextStyle(
-                              fontSize: 14,
-                              fontWeight: FontWeight.w500,
-                              color: Colors.grey,
-                            ),
-                          ),
-                        ),
-                        SwitchListTile(
-                          title: const Text('Preserve Keychain'),
-                          subtitle: const Text('Keep passwords and credentials'),
-                          value: _preserveKeychain,
-                          onChanged: (bool value) {
-                            setState(() {
-                              _preserveKeychain = value;
-                            });
-                          },
-                        ),
-                        SwitchListTile(
-                          title: const Text('Preserve User Defaults'),
-                          subtitle: const Text('Keep app preferences and settings'),
-                          value: _preserveUserDefaults,
-                          onChanged: (bool value) {
-                            setState(() {
-                              _preserveUserDefaults = value;
-                            });
-                          },
-                        ),
-                      ],
                     ],
                   ),
                 ),
-                const SizedBox(height: 16),
-                // Restart buttons
-                Column(
-                  mainAxisSize: MainAxisSize.min,
+              ).animate().scale(),
+              const SizedBox(height: 48),
+
+              // Settings Section
+              Text(
+                'SETTINGS',
+                style: GoogleFonts.inter(
+                  fontSize: 12,
+                  fontWeight: FontWeight.w600,
+                  color: Colors.grey[500],
+                  letterSpacing: 2,
+                ),
+              ),
+              const SizedBox(height: 16),
+              Container(
+                decoration: BoxDecoration(
+                  color: const Color(0xFF2A2A2A),
+                  borderRadius: BorderRadius.circular(12),
+                ),
+                child: SwitchListTile(
+                  title: Text(
+                    'Clear Data',
+                    style: GoogleFonts.inter(
+                      color: Colors.white,
+                      fontWeight: FontWeight.w500,
+                    ),
+                  ),
+                  subtitle: Text(
+                    'Reset app data when restarting',
+                    style: GoogleFonts.inter(
+                      color: Colors.grey[400],
+                      fontSize: 12,
+                    ),
+                  ),
+                  value: _clearData,
+                  onChanged: (value) => setState(() => _clearData = value),
+                  activeColor: Colors.greenAccent,
+                ),
+              ).animate().slideX(begin: -0.2).fadeIn(),
+              const SizedBox(height: 48),
+
+              // Restart Options Section
+              Text(
+                'RESTART OPTIONS',
+                style: GoogleFonts.inter(
+                  fontSize: 12,
+                  fontWeight: FontWeight.w600,
+                  color: Colors.grey[500],
+                  letterSpacing: 2,
+                ),
+              ),
+              const SizedBox(height: 16),
+              Container(
+                padding: const EdgeInsets.all(20),
+                decoration: BoxDecoration(
+                  color: const Color(0xFF2A2A2A),
+                  borderRadius: BorderRadius.circular(12),
+                ),
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.stretch,
                   children: [
-                    SizedBox(
-                      width: double.infinity,
-                      child: FilledButton.icon(
-                        onPressed: () => _restartApp(
-                          mode: RestartMode.immediate,
-                          buttonLabel: 'Terminate & Restart',
-                          terminate: true,
+                    ElevatedButton.icon(
+                      onPressed: _handleUIRestart,
+                      icon: const FaIcon(
+                        FontAwesomeIcons.display,
+                        size: 16,
+                      ),
+                      label: const Text('UI RESTART'),
+                      style: ElevatedButton.styleFrom(
+                        padding: const EdgeInsets.all(16),
+                        backgroundColor: Colors.greenAccent,
+                        foregroundColor: Colors.black,
+                        textStyle: GoogleFonts.inter(
+                          fontWeight: FontWeight.w600,
+                          letterSpacing: 1,
                         ),
-                        icon: const Icon(Icons.power_settings_new),
-                        label: const Text('Terminate & Restart'),
                       ),
                     ),
-                    const SizedBox(height: 8),
-                    SizedBox(
-                      width: double.infinity,
-                      child: FilledButton.icon(
-                        onPressed: () => _restartApp(
-                          mode: RestartMode.immediate,
-                          buttonLabel: 'UI-Only Restart',
-                          terminate: false,
+                    const SizedBox(height: 12),
+                    ElevatedButton.icon(
+                      onPressed: _handleTerminateRestart,
+                      icon: const FaIcon(
+                        FontAwesomeIcons.powerOff,
+                        size: 16,
+                      ),
+                      label: const Text('TERMINATE & RESTART'),
+                      style: ElevatedButton.styleFrom(
+                        padding: const EdgeInsets.all(16),
+                        backgroundColor: const Color(0xFF3A3A3A),
+                        foregroundColor: Colors.white,
+                        textStyle: GoogleFonts.inter(
+                          fontWeight: FontWeight.w600,
+                          letterSpacing: 1,
                         ),
-                        icon: const Icon(Icons.refresh),
-                        label: const Text('UI-Only Restart'),
                       ),
                     ),
-                    const SizedBox(height: 8),
-                    SizedBox(
-                      width: double.infinity,
-                      child: OutlinedButton.icon(
-                        onPressed: () => _restartApp(
-                          mode: RestartMode.withConfirmation,
-                          buttonLabel: 'Restart',
-                          terminate: true,
+                    const SizedBox(height: 12),
+                    OutlinedButton.icon(
+                      onPressed: _handleConfirmationRestart,
+                      icon: const FaIcon(
+                        FontAwesomeIcons.triangleExclamation,
+                        size: 16,
+                      ),
+                      label: const Text('WITH CONFIRMATION'),
+                      style: OutlinedButton.styleFrom(
+                        padding: const EdgeInsets.all(16),
+                        foregroundColor: Colors.grey[400],
+                        side: BorderSide(color: Colors.grey[800]!),
+                        textStyle: GoogleFonts.inter(
+                          fontWeight: FontWeight.w600,
+                          letterSpacing: 1,
                         ),
-                        icon: const Icon(Icons.help_outline),
-                        label: const Text('Show Dialog Example'),
                       ),
                     ),
                   ],
                 ),
-              ],
-            ),
+              ).animate().slideX(begin: 0.2).fadeIn(),
+              const SizedBox(height: 32),
+            ],
+          ),
+        ),
+      ),
+      floatingActionButton: Container(
+        decoration: BoxDecoration(
+          shape: BoxShape.circle,
+          gradient: LinearGradient(
+            begin: Alignment.topLeft,
+            end: Alignment.bottomRight,
+            colors: [
+              Colors.greenAccent,
+              Colors.greenAccent.shade400,
+            ],
+          ),
+        ),
+        child: FloatingActionButton.large(
+          onPressed: _incrementCounter,
+          tooltip: 'Increment',
+          elevation: 0,
+          backgroundColor: Colors.transparent,
+          child: const FaIcon(
+            FontAwesomeIcons.plus,
+            color: Colors.black,
+          ),
+        ),
+      )
+          .animate(
+            onPlay: (controller) => controller.repeat(reverse: true),
+          )
+          .scaleXY(
+            begin: 1.0,
+            end: 1.1,
+            duration: 1.seconds,
+            curve: Curves.easeInOut,
+          ),
     );
   }
 }

@@ -1,18 +1,19 @@
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
+import 'package:flutter/widgets.dart';
 import '../terminate_restart_platform_interface.dart';
 
 /// Options for restarting the app
 class TerminateRestartOptions {
   /// Whether to terminate the app or just restart the UI
   final bool terminate;
-  
+
   /// Whether to clear app data
   final bool clearData;
-  
+
   /// Whether to preserve keychain data
   final bool preserveKeychain;
-  
+
   /// Whether to preserve user defaults
   final bool preserveUserDefaults;
 
@@ -37,7 +38,7 @@ enum RestartMode {
 /// The main plugin class for restarting Flutter apps
 class TerminateRestart {
   static TerminateRestart? _instance;
-  
+
   /// Get the singleton instance
   static TerminateRestart get instance {
     _instance ??= TerminateRestart._();
@@ -49,7 +50,7 @@ class TerminateRestart {
 
   final MethodChannel _internalChannel =
       const MethodChannel('com.ahmedsleem.terminate_restart/internal');
-  
+
   bool _initialized = false;
   VoidCallback? _onRootReset;
 
@@ -65,25 +66,51 @@ class TerminateRestart {
   Future<dynamic> _handleInternalMessages(MethodCall call) async {
     switch (call.method) {
       case 'resetToRoot':
-        _onRootReset?.call();
+        if (_onRootReset != null) {
+          _onRootReset!();
+        } else {
+          // Default behavior if no onRootReset callback is provided
+          final rootElement = WidgetsBinding.instance.rootElement;
+          if (rootElement != null) {
+            // Find the first valid BuildContext
+            BuildContext? context;
+            void visitor(Element element) {
+              if (!element.debugIsActive) return;
+              context ??= element;
+            }
+
+            rootElement.visitChildren(visitor);
+
+            if (context != null && context!.mounted) {
+              // Get the navigator before any async operations
+              final navigator = Navigator.of(context!, rootNavigator: true);
+
+              // Reset navigation
+              while (navigator.canPop()) {
+                navigator.pop();
+              }
+
+              // Push to splash screen
+              navigator.pushNamedAndRemoveUntil('/splash', (_) => false);
+            }
+          }
+        }
         break;
     }
   }
 
   /// Restarts the app with the given options.
   Future<bool> restartApp({
-    required TerminateRestartOptions options,
-  }) async {
-    try {
-      return await TerminateRestartPlatform.instance.restartApp(
-        clearData: options.clearData,
-        preserveKeychain: options.preserveKeychain,
-        preserveUserDefaults: options.preserveUserDefaults,
-        terminate: options.terminate,
-      );
-    } catch (e) {
-      debugPrint('Error restarting app: $e');
-      return false;
-    }
+    bool clearData = false,
+    bool preserveKeychain = false,
+    bool preserveUserDefaults = false,
+    bool terminate = true,
+  }) {
+    return TerminateRestartPlatform.instance.restartApp(
+      clearData: clearData,
+      preserveKeychain: preserveKeychain,
+      preserveUserDefaults: preserveUserDefaults,
+      terminate: terminate,
+    );
   }
 }

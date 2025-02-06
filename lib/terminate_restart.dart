@@ -11,13 +11,13 @@ import 'package:flutter/services.dart';
 class TerminateRestartOptions {
   /// Whether to terminate the app or just restart the UI
   final bool terminate;
-  
+
   /// Whether to clear app data
   final bool clearData;
-  
+
   /// Whether to preserve keychain data
   final bool preserveKeychain;
-  
+
   /// Whether to preserve user defaults
   final bool preserveUserDefaults;
 
@@ -42,7 +42,7 @@ enum RestartMode {
 /// The main plugin class for restarting Flutter apps
 class TerminateRestart {
   static TerminateRestart? _instance;
-  
+
   /// Get the singleton instance
   static TerminateRestart get instance {
     _instance ??= TerminateRestart._();
@@ -52,12 +52,12 @@ class TerminateRestart {
   /// Private constructor
   TerminateRestart._();
 
-  static const MethodChannel _channel =
-      MethodChannel('com.ahmedsleem.terminate_restart/restart');
-  
-  static const MethodChannel _internalChannel =
-      MethodChannel('com.ahmedsleem.terminate_restart/internal');
-  
+  final MethodChannel _channel =
+      const MethodChannel('com.ahmedsleem.terminate_restart/restart');
+
+  final MethodChannel _internalChannel =
+      const MethodChannel('com.ahmedsleem.terminate_restart/internal');
+
   bool _initialized = false;
   VoidCallback? _onRootReset;
 
@@ -78,7 +78,7 @@ class TerminateRestart {
     }
   }
 
-  /// Restarts the app with the given options.
+  /// Restarts the app with the given options
   Future<bool> restartApp({
     required TerminateRestartOptions options,
   }) async {
@@ -90,9 +90,53 @@ class TerminateRestart {
         'preserveUserDefaults': options.preserveUserDefaults,
       });
       return result ?? false;
-    } catch (e) {
-      debugPrint('Error restarting app: $e');
+    } on PlatformException catch (e) {
+      debugPrint('Error restarting app: ${e.message}');
       return false;
     }
+  }
+
+  /// Shows a confirmation dialog before restarting
+  Future<bool> restartAppWithConfirmation(
+    BuildContext context, {
+    String title = 'Restart Required',
+    String message = 'The app needs to restart to apply changes.',
+    String confirmText = 'Restart Now',
+    String cancelText = 'Later',
+    bool clearData = false,
+    bool preserveKeychain = false,
+    bool preserveUserDefaults = false,
+    bool terminate = true,
+  }) async {
+    final confirmed = await showDialog<bool>(
+      context: context,
+      builder: (context) => AlertDialog(
+        title: Text(title),
+        content: Text(message),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.of(context).pop(false),
+            child: Text(cancelText),
+          ),
+          TextButton(
+            onPressed: () => Navigator.of(context).pop(true),
+            child: Text(confirmText),
+          ),
+        ],
+      ),
+    );
+
+    if (confirmed == true) {
+      return restartApp(
+        options: TerminateRestartOptions(
+          clearData: clearData,
+          preserveKeychain: preserveKeychain,
+          preserveUserDefaults: preserveUserDefaults,
+          terminate: terminate,
+        ),
+      );
+    }
+
+    return false;
   }
 }

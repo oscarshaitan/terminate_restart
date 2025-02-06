@@ -110,34 +110,60 @@ public class TerminateRestartPlugin: NSObject, FlutterPlugin {
                 return
             }
             
+            print(" [TerminateRestart] Creating new Flutter view controller")
+            
+            // Disable user interaction during transition
+            window.isUserInteractionEnabled = false
+            
             // Get the Flutter engine
             guard let flutterEngine = flutterViewController.engine else {
                 print(" [TerminateRestart] Error: No Flutter engine found")
                 return
             }
             
-            print(" [TerminateRestart] Creating new Flutter view controller")
+            // Create a new engine
+            let newEngine = FlutterEngine(name: "restart_engine")
+            guard newEngine.run() else {
+                print(" [TerminateRestart] Error: Failed to run new engine")
+                return
+            }
             
-            // Disable user interaction during transition
-            window.isUserInteractionEnabled = false
+            // Create a new Flutter view controller with the new engine
+            let newFlutterViewController = FlutterViewController(engine: newEngine, nibName: nil, bundle: nil)
             
-            // Create a new Flutter view controller with the same engine
-            let newFlutterViewController = FlutterViewController(engine: flutterEngine, nibName: nil, bundle: nil)
+            // Set up method channels on the new engine
+            let channel = FlutterMethodChannel(name: "com.ahmedsleem.terminate_restart/restart", binaryMessenger: newEngine.binaryMessenger)
+            let internalChannel = FlutterMethodChannel(name: "com.ahmedsleem.terminate_restart/internal", binaryMessenger: newEngine.binaryMessenger)
             
-            // Notify Flutter to reset navigation and state
-            let channel = FlutterMethodChannel(name: "com.ahmedsleem.terminate_restart/internal", binaryMessenger: flutterEngine.binaryMessenger)
-            channel.invokeMethod("resetToRoot", arguments: nil)
+            // Register the plugin with the new engine
+            let registrar = newEngine.registrar(forPlugin: "TerminateRestartPlugin")
+            let instance = TerminateRestartPlugin()
+            registrar?.addMethodCallDelegate(instance, channel: channel)
             
             // Perform the view controller replacement with animation
             UIView.transition(with: window,
                             duration: 0.3,
                             options: .transitionCrossDissolve,
                             animations: {
+                // Remove old view controller
+                flutterViewController.willMove(toParent: nil)
+                flutterViewController.view.removeFromSuperview()
+                flutterViewController.removeFromParent()
+                
+                // Set new view controller
                 window.rootViewController = newFlutterViewController
             }) { _ in
-                // Re-enable user interaction after transition
+                // Re-enable user interaction
                 window.isUserInteractionEnabled = true
-                print(" [TerminateRestart] UI restart completed")
+                
+                // Clean up old engine
+                flutterEngine.destroyContext()
+                
+                // Reset navigation on new engine
+                DispatchQueue.main.asyncAfter(deadline: .now() + 0.1) {
+                    internalChannel.invokeMethod("resetToRoot", arguments: nil)
+                    print(" [TerminateRestart] UI restart completed")
+                }
             }
         }
     }

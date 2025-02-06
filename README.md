@@ -4,27 +4,21 @@
 [![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](https://opensource.org/licenses/MIT)
 [![likes](https://img.shields.io/pub/likes/terminate_restart)](https://pub.dev/packages/terminate_restart/score)
 
-
 A robust Flutter plugin for terminating and restarting your app with extensive customization options. Perfect for implementing dynamic updates, clearing app state, or refreshing your app's UI.
 
 ## 📱 Demo
 
-<div align="center">
-  <table>
-    <tr>
-      <td align="center">
-        <img src="https://raw.githubusercontent.com/sleem2012/terminate_restart/main/.github/assets/demo.gif" alt="Plugin Demo" width="300"/>
-        <br>
-        <em>Plugin in Action</em>
-      </td>
-      <td align="center">
-        <img src="https://raw.githubusercontent.com/sleem2012/terminate_restart/main/.github/assets/screenshot.png" alt="Plugin Interface" width="300"/>
-        <br>
-        <em>Clean & Simple Interface</em>
-      </td>
-    </tr>
-  </table>
-</div>
+<p align="center">
+  <img src="https://raw.githubusercontent.com/sleem2012/terminate_restart/main/.github/assets/demo.gif" alt="Plugin Demo" width="300"/>
+  <br/>
+  <em>Plugin in Action</em>
+</p>
+
+<p align="center">
+  <img src="https://raw.githubusercontent.com/sleem2012/terminate_restart/main/.github/assets/screenshot.png" alt="Clean Interface" width="300"/>
+  <br/>
+  <em>Clean & Simple Interface</em>
+</p>
 
 The demo showcases:
 - 🔄 UI-only restart for quick refreshes
@@ -36,35 +30,41 @@ The demo showcases:
 ## 🌟 Features
 
 - ✨ **Two Restart Modes**:
-  - UI-only restart (recreate activities/views)
-  - Full process termination and restart
+  - **UI-only Restart**: (~200ms)
+    - Recreates activities/views while maintaining connections
+    - Perfect for theme changes, language switches
+    - Preserves network connections and background tasks
+    - Faster execution with minimal disruption
+  - **Full Process Restart**: (~800ms)
+    - Complete app termination and restart
+    - Ideal for updates, security-related changes
+    - Cleans up all resources and states
+    - Ensures fresh start with no residual state
+
 - 🧹 **Smart Data Management**:
-  - Optional data clearing during restart
-  - Configurable data preservation options
-  - Proper cleanup of app state
-- 🔒 **Secure Data Handling**:
-  - Preserve keychain data
-  - Preserve user defaults/shared preferences
+  - Configurable data clearing during restart
+  - Granular control over data preservation
+  - Secure handling of sensitive information
+
+- 🔒 **Security Features**:
+  - Optional keychain data preservation
+  - Secure user defaults handling
   - Clean process termination
+
 - 📱 **Platform Support**:
-  - ✅ Android
-  - ✅ iOS
-- 🎨 **Rich UI Options**:
-  - Customizable confirmation dialogs
-  - Immediate mode for quick restarts
-  - Beautiful default UI
-- ⚡ **Performance**:
-  - Minimal initialization delay
-  - Optimized process handling
-  - Clean state management
+  - ✅ Android: Full support with activity recreation
+  - ✅ iOS: Compliant with App Store guidelines
+
+- 💫 **User Experience**:
+  - Built-in confirmation dialogs
+  - Customizable messages and buttons
+  - Smooth transitions and animations
 
 ## 📦 Installation
 
-Add this to your package's `pubspec.yaml` file:
-
 ```yaml
 dependencies:
-  terminate_restart: ^1.0.4
+  terminate_restart: ^1.0.5
 ```
 
 ### Permissions
@@ -83,151 +83,56 @@ No special permissions are required for either Android or iOS! The plugin uses o
 
 ## 🚀 Getting Started
 
-### Initialization
-
-Initialize the plugin in your `main.dart`:
-
+1. **Initialize the Plugin**
 ```dart
 void main() {
-  // Initialize the plugin with root reset handler
-  TerminateRestart.instance.initialize(
-    onRootReset: () {
-      // This will be called during UI-only restarts
-      // Reset your navigation to root
-      // Clear navigation history
-      // Reset any global state
-      
-      // Example with GetX:
-      Get.reset();
-      
-      // Example with Provider:
-      context.read<YourProvider>().reset();
-      
-      // Example with Bloc:
-      context.read<YourBloc>().add(ResetEvent());
-      
-      // Example navigation reset:
-      Navigator.of(context).popUntil((route) => route.isFirst);
-    },
-  );
-  
+  WidgetsFlutterBinding.ensureInitialized();
+  // Initialize with default settings
+  TerminateRestart.instance.initialize();
   runApp(MyApp());
 }
 ```
 
-### Basic Usage
-
-The plugin offers three restart modes:
-
-1. **Full Restart (with termination)**
+2. **Basic Usage**
 ```dart
+// UI-only restart (fast, maintains connections)
 await TerminateRestart.instance.restartApp(
-  options: TerminateRestartOptions(
-    terminate: true,  // Fully terminate and restart
-  ),
-);
-```
-
-2. **UI-Only Restart (maintains connections)**
-```dart
-await TerminateRestart.instance.restartApp(
-  options: TerminateRestartOptions(
-    terminate: false,  // UI-only restart
-  ),
-);
-```
-
-3. **Restart with Data Clearing**
-```dart
-await TerminateRestart.instance.restartApp(
-  options: TerminateRestartOptions(
-    terminate: true,
-    clearData: true,
-    preserveKeychain: true,  // Optional: keep keychain data
-    preserveUserDefaults: false,  // Optional: clear user defaults
-  ),
-);
-```
-
-### Restart Modes Comparison
-
-| Feature | Full Restart | UI-Only Restart |
-|---------|-------------|-----------------|
-| Connections | ❌ Terminated | ✅ Maintained |
-| State | ❌ Cleared | ✅ Resetable |
-| Navigation | ❌ Cleared | ✅ Reset to Root |
-| Speed | 🐢 Slower | 🚀 Faster |
-| Memory | ✅ Fully Cleared | ⚠️ Preserved |
-| Background Tasks | ❌ Terminated | ✅ Maintained |
-
-### Common Use Cases
-
-1. **Theme Switching**
-```dart
-// Use UI-only restart to switch themes smoothly
-await TerminateRestart.instance.restartApp(
-  options: TerminateRestartOptions(
+  options: const TerminateRestartOptions(
     terminate: false,
   ),
 );
-```
 
-2. **Language Change**
-```dart
-// Use UI-only restart to apply new locale
+// Full app restart (clean slate)
 await TerminateRestart.instance.restartApp(
-  options: TerminateRestartOptions(
-    terminate: false,
-  ),
-);
-```
-
-3. **User Logout**
-```dart
-// Full restart with data clearing
-await TerminateRestart.instance.restartApp(
-  options: TerminateRestartOptions(
-    terminate: true,
-    clearData: true,
-    preserveKeychain: true,  // Keep secure data
-  ),
-);
-```
-
-4. **App Update**
-```dart
-// Full restart to apply updates
-await TerminateRestart.instance.restartApp(
-  options: TerminateRestartOptions(
+  options: const TerminateRestartOptions(
     terminate: true,
   ),
 );
 ```
 
-### Best Practices
+### Advanced Usage
 
-1. **Choose the Right Mode**
-   - Use UI-only restart when maintaining connections is important
-   - Use full restart when a clean slate is needed
-   - Use data clearing when security is a concern
-
-2. **Handle Root Reset**
-   - Always implement the `onRootReset` callback
-   - Clear navigation stacks
-   - Reset global state
-   - Update UI accordingly
-
-3. **Error Handling**
 ```dart
-try {
-  await TerminateRestart.instance.restartApp(
-    options: TerminateRestartOptions(
-      terminate: false,
+// Initialize with custom root reset handler
+TerminateRestart.instance.initialize(
+  onRootReset: () {
+    // Custom navigation reset logic
+    Navigator.of(context).pushNamedAndRemoveUntil('/home', (_) => false);
+  },
+);
+
+// Handle back navigation (Android)
+@override
+Widget build(BuildContext context) {
+  return WillPopScope(
+    onWillPop: () async {
+      // Your custom back navigation logic
+      return true;
+    },
+    child: Scaffold(
+      // Your app content
     ),
   );
-} catch (e) {
-  print('Restart failed: $e');
-  // Handle failure
 }
 ```
 
@@ -253,12 +158,10 @@ try {
    ```dart
    // After downloading new assets/code
    await TerminateRestart.instance.restartApp(
-     options: TerminateRestartOptions(
-       terminate: true,
-       mode: RestartMode.withConfirmation,
-       dialogTitle: 'Update Ready',
-       dialogMessage: 'Restart to apply updates?',
-     ),
+     terminate: true,
+     mode: RestartMode.withConfirmation,
+     dialogTitle: 'Update Ready',
+     dialogMessage: 'Restart to apply updates?',
    );
    ```
 
@@ -266,12 +169,10 @@ try {
    ```dart
    // Clear app data but preserve important settings
    await TerminateRestart.instance.restartApp(
-     options: TerminateRestartOptions(
-       terminate: true,
-       clearData: true,
-       preserveKeychain: true,
-       preserveUserDefaults: true,
-     ),
+     terminate: true,
+     clearData: true,
+     preserveKeychain: true,
+     preserveUserDefaults: true,
    );
    ```
 
@@ -279,9 +180,7 @@ try {
    ```dart
    // Refresh UI without full restart
    await TerminateRestart.instance.restartApp(
-     options: TerminateRestartOptions(
-       terminate: false,
-     ),
+     terminate: false,
    );
    ```
 
@@ -336,12 +235,12 @@ Special thanks to:
 
 If you have any questions or need help, you can:
 - Open an [issue](https://github.com/sleem2012/terminate_restart/issues)
-- Check our [example app](example) for more usage examples
+- Check our [example](https://github.com/sleem2012/terminate_restart/tree/main/example) for more usage examples
 - Read our [API documentation](https://pub.dev/documentation/terminate_restart/latest/)
 
 ## 📚 Complete Example
 
-Check out our [example app](example) for a full demonstration of all features, including:
+Check out our [example app](https://github.com/sleem2012/terminate_restart/tree/main/example) for a full demonstration of all features, including:
 
 - Basic UI/Process restart
 - Data clearing with preservation options
@@ -353,23 +252,19 @@ Check out our [example app](example) for a full demonstration of all features, i
 ## 🎥 Demo
 
 ### Quick Preview
-![Demo](screenshots/demo.gif)
+<p align="center">
+  <img src="https://raw.githubusercontent.com/sleem2012/terminate_restart/main/.github/assets/demo.gif" alt="Quick Preview" width="300"/>
+</p>
 
-### Video Tutorial
-https://github.com/sleem2012/terminate_restart/assets/video/demo.mp4
+### Example Screenshots
 
-<video width="320" height="240" controls>
-  <source src="https://github.com/sleem2012/terminate_restart/assets/video/demo.mp4" type="video/mp4">
-  Your browser does not support the video tag.
-</video>
+<p align="center">
+  <img src="https://raw.githubusercontent.com/sleem2012/terminate_restart/main/.github/assets/basic.png" alt="Basic Usage" width="250" style="margin-right: 10px"/>
+  <img src="https://raw.githubusercontent.com/sleem2012/terminate_restart/main/.github/assets/dialog.png" alt="Confirmation Dialog" width="250" style="margin-right: 10px"/>
+  <img src="https://raw.githubusercontent.com/sleem2012/terminate_restart/main/.github/assets/data_clearing.png" alt="Data Clearing" width="250"/>
+</p>
 
-## 📱 Screenshots
-
-<div style="display: flex; flex-direction: row;">
-  <img src="screenshots/basic.png" width="250" alt="Basic Usage">
-  <img src="screenshots/dialog.png" width="250" alt="Confirmation Dialog">
-  <img src="screenshots/data_clearing.png" width="250" alt="Data Clearing">
-</div>
+> Note: For a video demonstration of the plugin in action, visit our [YouTube channel](https://youtube.com/@sleem2012).
 
 ## 🔧 Platform-Specific Details
 
@@ -401,80 +296,91 @@ The iOS implementation provides:
 ## 👨‍💻 Author
 
 Made with ❤️ by Ahmed Sleem
-[LinkedIn](https://www.linkedin.com/in/sleem98/) • [GitHub](https://github.com/sleem2012/terminate_restart) • [pub.dev](https://pub.dev/packages/terminate_restart)
+[GitHub](https://github.com/sleem2012) • [pub.dev](https://pub.dev/publishers/sleem2012) • [LinkedIn](https://www.linkedin.com/in/sleem98/)
 
 ---
 
 <p align="center">
-  <a href="https://github.com/sleem2012/terminate_restart">GitHub</a> •
   <a href="https://pub.dev/packages/terminate_restart">pub.dev</a> •
+  <a href="https://github.com/sleem2012/terminate_restart">GitHub</a> •
   <a href="https://github.com/sleem2012/terminate_restart/issues">Issues</a>
 </p>
 
+## 🔧 Configuration Options
+
+### Core Parameters
+
+| Parameter | Type | Default | Description |
+|-----------|------|---------|-------------|
+| `terminate` | `bool` | `true` | Full termination vs UI-only restart |
+| `clearData` | `bool` | `false` | Clear app data during restart |
+| `preserveKeychain` | `bool` | `false` | Keep keychain data when clearing |
+| `preserveUserDefaults` | `bool` | `false` | Keep user defaults when clearing |
+
+### Performance Considerations
+
+- **UI-only Restart** (~200ms):
+  - Maintains network connections
+  - Preserves background tasks
+  - Ideal for UI updates
+
+- **Full Restart** (~800ms):
+  - Terminates all processes
+  - Cleans up resources
+  - Required for security-related changes
+
 ## 🎯 Real-World Examples
 
-### 1. Theme Switching
-
+### Theme Switching
 ```dart
 class ThemeManager {
-  static Future<void> switchTheme() async {
-    // Save new theme
-    await prefs.setString('theme', 'dark');
+  Future<void> toggleTheme() async {
+    // Update theme in your state management solution
+    // Example using Provider (implement based on your state management):
+    // Provider.of<ThemeProvider>(context, listen: false).toggleTheme();
     
-    // Restart UI only to apply theme
     await TerminateRestart.instance.restartApp(
-      options: TerminateRestartOptions(
-        terminate: false,
+      options: const TerminateRestartOptions(
+        terminate: false, // UI-only restart is sufficient
       ),
     );
   }
 }
 ```
 
-### 2. Language Change
-
-```dart
-class LocalizationManager {
-  static Future<void> changeLanguage(String locale) async {
-    // Save new locale
-    await prefs.setString('locale', locale);
-    
-    // Show confirmation with custom message
-    await TerminateRestart.instance.restartApp(
-      options: TerminateRestartOptions(
-        terminate: true,
-        mode: RestartMode.withConfirmation,
-        dialogTitle: 'Language Changed',
-        dialogMessage: 'Restart app to apply new language?',
-        restartNowText: 'Restart Now',
-        restartLaterText: 'Later',
-      ),
-    );
-  }
-}
-```
-
-### 3. App Update
-
+### App Update
 ```dart
 class UpdateManager {
-  static Future<void> applyUpdate() async {
+  Future<void> applyUpdate() async {
     try {
-      // Download and save update
-      await downloadUpdate();
-      
-      // Clear cache but preserve settings
-      await TerminateRestart.instance.restartApp(
-        options: TerminateRestartOptions(
-          terminate: true,
-          mode: RestartMode.withConfirmation,
-          clearData: true,
-          preserveUserDefaults: true,
-          preserveKeychain: true,
-          dialogTitle: 'Update Ready',
-          dialogMessage: 'Restart to complete update?',
+      // Show confirmation with custom message
+      final context = // Get valid context from your widget tree
+      final confirmed = await showDialog<bool>(
+        context: context,
+        builder: (context) => AlertDialog(
+          title: Text('Update Ready'),
+          content: Text('Restart to apply updates?'),
+          actions: [
+            TextButton(
+              onPressed: () => Navigator.pop(context, false),
+              child: Text('Later'),
+            ),
+            TextButton(
+              onPressed: () => Navigator.pop(context, true),
+              child: Text('Restart Now'),
+            ),
+          ],
         ),
       );
+      
+      if (confirmed == true) {
+        await TerminateRestart.instance.restartApp(
+          options: const TerminateRestartOptions(
+            terminate: true, // Full restart for updates
+            clearData: false,
+          ),
+        );
+      }
     } catch (e) {
       print('Update failed: $e');
     }
@@ -482,91 +388,64 @@ class UpdateManager {
 }
 ```
 
-### 4. User Logout
-
+### Custom Navigation Reset
 ```dart
-class AuthManager {
-  static Future<void> logout() async {
-    try {
-      // Clear all data except keychain
-      await TerminateRestart.instance.restartApp(
-        options: TerminateRestartOptions(
-          clearData: true,
-          preserveKeychain: true,
-          terminate: true, // Full restart for security
-        ),
-      );
-    } catch (e) {
-      print('Logout failed: $e');
-    }
-  }
-}
+// Initialize with custom navigation handling
+TerminateRestart.instance.initialize(
+  onRootReset: () {
+    // Example: Reset to home screen and clear navigation stack
+    // Note: Ensure you have a valid context when accessing Navigator
+    Navigator.of(context).pushNamedAndRemoveUntil(
+      '/home',
+      (_) => false, // Remove all previous routes
+    );
+  },
+);
 ```
 
-## 🔧 Configuration Options
+## ⚠️ Platform Considerations
 
-| Option | Type | Default | Description |
-|--------|------|---------|-------------|
-| `context` | `BuildContext?` | `null` | Required for confirmation dialog |
-| `mode` | `RestartMode` | `immediate` | Restart mode (immediate/confirmation) |
-| `clearData` | `bool` | `false` | Clear app data during restart |
-| `preserveKeychain` | `bool` | `false` | Keep keychain data when clearing |
-| `preserveUserDefaults` | `bool` | `false` | Keep user defaults when clearing |
-| `terminate` | `bool` | `true` | Full termination vs UI-only restart |
+### iOS
+- Complies with App Store guidelines regarding app termination
+- Uses approved methods for activity recreation
+- Handles state preservation according to iOS lifecycle
 
-## 🛡️ Error Handling
+### Android
+- Implements proper activity recreation
+- Handles back navigation appropriately
+- Manages process termination safely
 
-### Common Errors and Solutions
+## 🔒 Security Best Practices
 
-1. **Context Error**
-```dart
-try {
-  await TerminateRestart.instance.restartApp(
-    options: TerminateRestartOptions(
-      terminate: true,
-      mode: RestartMode.withConfirmation,
-    ),
-  );
-} on ArgumentError catch (e) {
-  // Handle invalid or disposed context
-  print('Context error: $e');
-} catch (e) {
-  print('Other error: $e');
-}
-```
+1. **Data Clearing**
+   - Use `clearData: true` for security-sensitive operations
+   - Enable `preserveKeychain` to retain critical credentials
+   - Consider `preserveUserDefaults` for app settings
 
-2. **Data Clearing Error**
-```dart
-try {
-  await TerminateRestart.instance.restartApp(
-    options: TerminateRestartOptions(
-      terminate: true,
-      clearData: true,
-      preserveKeychain: true,
-    ),
-  );
-} on PlatformException catch (e) {
-  // Handle platform-specific errors
-  print('Platform error: $e');
-} catch (e) {
-  print('Other error: $e');
-}
-```
+2. **State Management**
+   - Clear sensitive data before restart
+   - Implement proper authentication state handling
+   - Use secure storage for critical information
 
-3. **Timeout Handling**
-```dart
-try {
-  await TerminateRestart.instance.restartApp(
-    options: TerminateRestartOptions(
-      terminate: true,
-    ),
-  ).timeout(
-    Duration(seconds: 5),
-    onTimeout: () {
-      throw TimeoutException('Restart timed out');
-    },
-  );
-} on TimeoutException catch (e) {
-  print('Timeout: $e');
-}
-```
+## 👥 Contributing
+
+Contributions are welcome! Please read our [contributing guidelines](CONTRIBUTING.md) before submitting PRs.
+
+## 🙏 Acknowledgments
+
+Special thanks to:
+- Our beta testers and early adopters
+- The Flutter community for valuable feedback
+- Contributors who helped improve the package
+
+## 📄 License
+
+This project is licensed under the MIT License - see the [LICENSE](LICENSE) file for details.
+
+---
+
+<p align="center">
+  <a href="https://pub.dev/packages/terminate_restart">pub.dev</a> •
+  <a href="https://github.com/sleem2012/terminate_restart">GitHub</a> •
+  <a href="https://github.com/sleem2012/terminate_restart/issues">Issues</a>
+</p>

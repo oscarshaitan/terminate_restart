@@ -124,3 +124,13 @@ Initial release with the following features:
   * More reliable UI-only restart on both platforms
   * Better error handling and logging
   * Code cleanup and documentation updates
+
+## 1.0.5
+
+* Improved code formatting and organization
+* Enhanced error handling with specific PlatformException handling
+* Updated method channel naming for better consistency
+* Added comprehensive API documentation
+* Fixed UI restart functionality
+* Added back navigation handling for Android
+* Improved static analysis compliance
