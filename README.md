@@ -115,18 +115,94 @@ await TerminateRestart.instance.restartApp(
     terminate: true,
   ),
 );
+
+// UI-only restart with confirmation
+await TerminateRestart.instance.restartApp(
+  options: const TerminateRestartOptions(
+    terminate: false,
+  ),
+  mode: RestartMode.withConfirmation,
+  dialogTitle: 'Refresh UI',
+  dialogMessage: 'Do you want to refresh the app UI?',
+);
+
+// Full app restart with confirmation
+await TerminateRestart.instance.restartApp(
+  options: const TerminateRestartOptions(
+    terminate: true,
+  ),
+  mode: RestartMode.withConfirmation,
+  dialogTitle: 'Restart App',
+  dialogMessage: 'Do you want to restart the app?',
+);
 ```
+
+### Usage Reference Table
+
+| Scenario | Description | Code Example |
+|----------|-------------|--------------|
+| UI Refresh | Quick UI restart without termination | ```dart
+await TerminateRestart.instance.restartApp(
+  options: const TerminateRestartOptions(
+    terminate: false,
+  ),
+);``` |
+| Full Restart | Complete app termination and restart | ```dart
+await TerminateRestart.instance.restartApp(
+  options: const TerminateRestartOptions(
+    terminate: true,
+  ),
+);``` |
+| Clear Data | Restart with data clearing | ```dart
+await TerminateRestart.instance.restartApp(
+  options: const TerminateRestartOptions(
+    terminate: true,
+    clearData: true,
+  ),
+);``` |
+| Preserve Settings | Clear data but keep settings | ```dart
+await TerminateRestart.instance.restartApp(
+  options: const TerminateRestartOptions(
+    terminate: true,
+    clearData: true,
+    preserveKeychain: true,
+    preserveUserDefaults: true,
+  ),
+);``` |
+| With Confirmation | Show dialog before restart | ```dart
+await TerminateRestart.instance.restartApp(
+  options: const TerminateRestartOptions(
+    terminate: true,
+  ),
+  mode: RestartMode.withConfirmation,
+  dialogTitle: 'Restart Required',
+  dialogMessage: 'Do you want to restart?',
+);``` |
+| After Update | Restart after applying updates | ```dart
+await TerminateRestart.instance.restartApp(
+  options: const TerminateRestartOptions(
+    terminate: true,
+    clearData: false,
+  ),
+  mode: RestartMode.withConfirmation,
+  dialogTitle: 'Update Ready',
+  dialogMessage: 'Restart to apply updates?',
+);``` |
 
 ### Advanced Usage
 
 ```dart
 // Initialize with custom root reset handler
-TerminateRestart.instance.initialize(
-  onRootReset: () {
-    // Custom navigation reset logic
-    Navigator.of(context).pushNamedAndRemoveUntil('/home', (_) => false);
-  },
-);
+void main() {
+  WidgetsFlutterBinding.ensureInitialized();
+  TerminateRestart.instance.initialize(
+    onRootReset: () {
+      // Custom navigation reset logic
+      Navigator.of(context).pushNamedAndRemoveUntil('/home', (_) => false);
+    },
+  );
+  runApp(MyApp());
+}
 
 // Handle back navigation (Android)
 @override
@@ -165,7 +241,9 @@ Widget build(BuildContext context) {
    ```dart
    // After downloading new assets/code
    await TerminateRestart.instance.restartApp(
-     terminate: true,
+     options: const TerminateRestartOptions(
+       terminate: true,
+     ),
      mode: RestartMode.withConfirmation,
      dialogTitle: 'Update Ready',
      dialogMessage: 'Restart to apply updates?',
@@ -176,10 +254,12 @@ Widget build(BuildContext context) {
    ```dart
    // Clear app data but preserve important settings
    await TerminateRestart.instance.restartApp(
-     terminate: true,
-     clearData: true,
-     preserveKeychain: true,
-     preserveUserDefaults: true,
+     options: const TerminateRestartOptions(
+       terminate: true,
+       clearData: true,
+       preserveKeychain: true,
+       preserveUserDefaults: true,
+     ),
    );
    ```
 
@@ -187,7 +267,9 @@ Widget build(BuildContext context) {
    ```dart
    // Refresh UI without full restart
    await TerminateRestart.instance.restartApp(
-     terminate: false,
+     options: const TerminateRestartOptions(
+       terminate: false,
+     ),
    );
    ```
 
@@ -200,8 +282,8 @@ Widget build(BuildContext context) {
      ),
      mode: RestartMode.withConfirmation,
      dialogTitle: 'Restart Required',
-     dialogMessage: 'Do you want to restart the app now?',
-     confirmButtonText: 'Yes, Restart',
+     dialogMessage: 'Do you want to restart the app?',
+     confirmButtonText: 'Restart',
      cancelButtonText: 'Later',
    );
    ```
