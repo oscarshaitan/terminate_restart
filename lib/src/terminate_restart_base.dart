@@ -103,7 +103,7 @@ class TerminateRestart {
   Future<void> _waitForPluginRegistration() async {
     // Initial delay to allow basic Flutter initialization
     await Future.delayed(const Duration(milliseconds: 500));
-    
+
     // Force a rebuild of the widget tree
     final binding = WidgetsFlutterBinding.ensureInitialized();
     binding.reassembleApplication();
@@ -125,16 +125,20 @@ class TerminateRestart {
 
   Future<void> _initializePathProvider() async {
     try {
-      final pathProvider = await const MethodChannel('dev.flutter.pigeon.path_provider_foundation.PathProviderApi')
-          .invokeMethod<String>('getDirectoryPath', {'type': 'applicationSupport'});
+      final pathProvider = await const MethodChannel(
+              'dev.flutter.pigeon.path_provider_foundation.PathProviderApi')
+          .invokeMethod<String>(
+              'getDirectoryPath', {'type': 'applicationSupport'});
       debugPrint('Path provider initialized: $pathProvider');
     } catch (e) {
       debugPrint('Error initializing path provider: $e');
       // Try again after a short delay
       await Future.delayed(const Duration(milliseconds: 200));
       try {
-        final pathProvider = await const MethodChannel('dev.flutter.pigeon.path_provider_foundation.PathProviderApi')
-            .invokeMethod<String>('getDirectoryPath', {'type': 'applicationSupport'});
+        final pathProvider = await const MethodChannel(
+                'dev.flutter.pigeon.path_provider_foundation.PathProviderApi')
+            .invokeMethod<String>(
+                'getDirectoryPath', {'type': 'applicationSupport'});
         debugPrint('Path provider initialized (retry): $pathProvider');
       } catch (e) {
         debugPrint('Error initializing path provider (retry): $e');
@@ -144,7 +148,8 @@ class TerminateRestart {
 
   Future<void> _initializeSharedPreferences() async {
     try {
-      final prefs = await const MethodChannel('dev.flutter.pigeon.shared_preferences_foundation.LegacyUserDefaultsApi')
+      final prefs = await const MethodChannel(
+              'dev.flutter.pigeon.shared_preferences_foundation.LegacyUserDefaultsApi')
           .invokeMethod<Map<String, Object?>>('getAll');
       debugPrint('Shared preferences initialized: ${prefs?.length} items');
     } catch (e) {
@@ -152,9 +157,11 @@ class TerminateRestart {
       // Try again after a short delay
       await Future.delayed(const Duration(milliseconds: 200));
       try {
-        final prefs = await const MethodChannel('dev.flutter.pigeon.shared_preferences_foundation.LegacyUserDefaultsApi')
+        final prefs = await const MethodChannel(
+                'dev.flutter.pigeon.shared_preferences_foundation.LegacyUserDefaultsApi')
             .invokeMethod<Map<String, Object?>>('getAll');
-        debugPrint('Shared preferences initialized (retry): ${prefs?.length} items');
+        debugPrint(
+            'Shared preferences initialized (retry): ${prefs?.length} items');
       } catch (e) {
         debugPrint('Error initializing shared preferences (retry): $e');
       }
@@ -183,16 +190,21 @@ class TerminateRestart {
         if (result) {
           // Wait for plugins to register after UI restart
           await _waitForPluginRegistration();
-          
+
           // Additional platform channel setup
-          ServicesBinding.instance.defaultBinaryMessenger.handlePlatformMessage(
-            'flutter/isolate',
-            const StandardMethodCodec().encodeMethodCall(const MethodCall('restart')),
-            (_) {},
+          ServicesBinding.instance.channelBuffers.push(
+            'flutter/platform',
+            const StandardMethodCodec().encodeMethodCall(
+              const MethodCall('SystemNavigator.pop'),
+            ),
+            (_) {}, // Adding the callback parameter
           );
 
           // Force reload plugins
-          for (final plugin in ['PathProviderPlugin', 'SharedPreferencesPlugin']) {
+          for (final plugin in [
+            'PathProviderPlugin',
+            'SharedPreferencesPlugin'
+          ]) {
             try {
               await const MethodChannel('flutter/plugin_registry')
                   .invokeMethod<void>('reload', {'pluginKey': plugin});
