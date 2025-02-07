@@ -1,3 +1,11 @@
+## 1.0.7
+
+* Updated deprecated platform message handling to use `channelBuffers.push`
+* Enhanced documentation with comprehensive usage table
+* Added more code examples including confirmation dialogs
+* Improved code formatting and organization
+* Updated README with clearer installation and usage instructions
+
 ## 1.0.6
 
 * Code maintenance and improvements
