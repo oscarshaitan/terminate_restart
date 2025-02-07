@@ -1,10 +1,14 @@
 ## 1.0.7
 
 * Updated deprecated platform message handling to use `channelBuffers.push`
-* Enhanced documentation with comprehensive usage table
-* Added more code examples including confirmation dialogs
-* Improved code formatting and organization
+* Enhanced documentation:
+  - Added Quick Start guide for faster onboarding
+  - Added iOS App Store compliance section
+  - Added comprehensive usage table with examples
+  - Added confirmation dialog examples
+  - Improved code formatting and organization
 * Updated README with clearer installation and usage instructions
+* Fixed code examples and method signatures
 
 ## 1.0.6
 
