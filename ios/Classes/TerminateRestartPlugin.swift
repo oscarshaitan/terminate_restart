@@ -131,14 +131,23 @@ public class TerminateRestartPlugin: NSObject, FlutterPlugin {
             // Create a new Flutter view controller with the new engine
             let newFlutterViewController = FlutterViewController(engine: newEngine, nibName: nil, bundle: nil)
             
+            // Register plugins using FlutterPluginRegistrant
+            if let registrantClass = NSClassFromString("GeneratedPluginRegistrant") as? NSObject.Type {
+                let registrant = registrantClass.init()
+                if registrant.responds(to: Selector(("registerWithRegistry:"))) {
+                    registrant.perform(Selector(("registerWithRegistry:")), with: newEngine)
+                }
+            }
+            
             // Set up method channels on the new engine
             let channel = FlutterMethodChannel(name: "com.ahmedsleem.terminate_restart/restart", binaryMessenger: newEngine.binaryMessenger)
             let internalChannel = FlutterMethodChannel(name: "com.ahmedsleem.terminate_restart/internal", binaryMessenger: newEngine.binaryMessenger)
             
-            // Register the plugin with the new engine
-            let registrar = newEngine.registrar(forPlugin: "TerminateRestartPlugin")
-            let instance = TerminateRestartPlugin()
-            registrar?.addMethodCallDelegate(instance, channel: channel)
+            // Register our plugin with the new engine
+            if let registrar = newEngine.registrar(forPlugin: "TerminateRestartPlugin") {
+                let instance = TerminateRestartPlugin()
+                registrar.addMethodCallDelegate(instance, channel: channel)
+            }
             
             // Perform the view controller replacement with animation
             UIView.transition(with: window,

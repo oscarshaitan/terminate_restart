@@ -32,4 +32,13 @@ class MethodChannelTerminateRestart extends TerminateRestartPlatform {
       return false;
     }
   }
+
+  @override
+  Future<void> gc() async {
+    try {
+      await methodChannel.invokeMethod<void>('gc');
+    } catch (e) {
+      debugPrint('Error during garbage collection: $e');
+    }
+  }
 }

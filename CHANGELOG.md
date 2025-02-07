@@ -1,3 +1,10 @@
+## 1.0.6
+
+* Code maintenance and improvements
+* Updated dependencies to latest compatible versions
+* Enhanced code documentation
+* Minor bug fixes and performance improvements
+
 ## 0.0.1
 
 Initial release with the following features:
@@ -134,3 +141,15 @@ Initial release with the following features:
 * Fixed UI restart functionality
 * Added back navigation handling for Android
 * Improved static analysis compliance
+
+## 1.0.6
+
+* Fixed critical issue with UI-only restart where plugins would fail to register properly
+* Added plugin registration wait mechanism for UI restarts
+* Added comprehensive FAQ section
+* Added advanced use cases with code examples
+* Added flow diagram explaining plugin architecture
+* Updated documentation with clearer examples
+* Improved media assets and documentation structure
+* Enhanced error handling documentation
+* Added more real-world examples

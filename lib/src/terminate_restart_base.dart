@@ -99,18 +99,121 @@ class TerminateRestart {
     }
   }
 
-  /// Restarts the app with the given options.
+  /// Wait for plugins to be registered after UI restart
+  Future<void> _waitForPluginRegistration() async {
+    // Initial delay to allow basic Flutter initialization
+    await Future.delayed(const Duration(milliseconds: 500));
+    
+    // Force a rebuild of the widget tree
+    final binding = WidgetsFlutterBinding.ensureInitialized();
+    binding.reassembleApplication();
+
+    // Additional delay to ensure platform channels are ready
+    await Future.delayed(const Duration(milliseconds: 500));
+
+    // Force garbage collection
+    await _internalChannel.invokeMethod<void>('gc');
+
+    // Wait for plugins to be ready
+    await Future.wait([
+      // Try to initialize path provider
+      _initializePathProvider(),
+      // Try to initialize shared preferences
+      _initializeSharedPreferences(),
+    ]);
+  }
+
+  Future<void> _initializePathProvider() async {
+    try {
+      final pathProvider = await const MethodChannel('dev.flutter.pigeon.path_provider_foundation.PathProviderApi')
+          .invokeMethod<String>('getDirectoryPath', {'type': 'applicationSupport'});
+      debugPrint('Path provider initialized: $pathProvider');
+    } catch (e) {
+      debugPrint('Error initializing path provider: $e');
+      // Try again after a short delay
+      await Future.delayed(const Duration(milliseconds: 200));
+      try {
+        final pathProvider = await const MethodChannel('dev.flutter.pigeon.path_provider_foundation.PathProviderApi')
+            .invokeMethod<String>('getDirectoryPath', {'type': 'applicationSupport'});
+        debugPrint('Path provider initialized (retry): $pathProvider');
+      } catch (e) {
+        debugPrint('Error initializing path provider (retry): $e');
+      }
+    }
+  }
+
+  Future<void> _initializeSharedPreferences() async {
+    try {
+      final prefs = await const MethodChannel('dev.flutter.pigeon.shared_preferences_foundation.LegacyUserDefaultsApi')
+          .invokeMethod<Map<String, Object?>>('getAll');
+      debugPrint('Shared preferences initialized: ${prefs?.length} items');
+    } catch (e) {
+      debugPrint('Error initializing shared preferences: $e');
+      // Try again after a short delay
+      await Future.delayed(const Duration(milliseconds: 200));
+      try {
+        final prefs = await const MethodChannel('dev.flutter.pigeon.shared_preferences_foundation.LegacyUserDefaultsApi')
+            .invokeMethod<Map<String, Object?>>('getAll');
+        debugPrint('Shared preferences initialized (retry): ${prefs?.length} items');
+      } catch (e) {
+        debugPrint('Error initializing shared preferences (retry): $e');
+      }
+    }
+  }
+
+  /// Restart the app with the given options
   Future<bool> restartApp({
-    bool clearData = false,
-    bool preserveKeychain = false,
-    bool preserveUserDefaults = false,
-    bool terminate = true,
-  }) {
+    TerminateRestartOptions options = const TerminateRestartOptions(),
+    RestartMode mode = RestartMode.immediate,
+    String? dialogTitle,
+    String? dialogMessage,
+    String? confirmButtonText,
+    String? cancelButtonText,
+  }) async {
+    if (!options.terminate) {
+      try {
+        // For UI-only restart, we need special handling
+        final result = await TerminateRestartPlatform.instance.restartApp(
+          clearData: options.clearData,
+          preserveKeychain: options.preserveKeychain,
+          preserveUserDefaults: options.preserveUserDefaults,
+          terminate: false,
+        );
+
+        if (result) {
+          // Wait for plugins to register after UI restart
+          await _waitForPluginRegistration();
+          
+          // Additional platform channel setup
+          ServicesBinding.instance.defaultBinaryMessenger.handlePlatformMessage(
+            'flutter/isolate',
+            const StandardMethodCodec().encodeMethodCall(const MethodCall('restart')),
+            (_) {},
+          );
+
+          // Force reload plugins
+          for (final plugin in ['PathProviderPlugin', 'SharedPreferencesPlugin']) {
+            try {
+              await const MethodChannel('flutter/plugin_registry')
+                  .invokeMethod<void>('reload', {'pluginKey': plugin});
+            } catch (e) {
+              debugPrint('Error reloading plugin $plugin: $e');
+            }
+          }
+        }
+
+        return result;
+      } catch (e) {
+        debugPrint('Error during UI restart: $e');
+        return false;
+      }
+    }
+
     return TerminateRestartPlatform.instance.restartApp(
-      clearData: clearData,
-      preserveKeychain: preserveKeychain,
-      preserveUserDefaults: preserveUserDefaults,
-      terminate: terminate,
+      clearData: options.clearData,
+      preserveKeychain: options.preserveKeychain,
+      preserveUserDefaults: options.preserveUserDefaults,
+      terminate: true,
     );
   }
 }

@@ -40,4 +40,9 @@ abstract class TerminateRestartPlatform extends PlatformInterface {
   }) {
     throw UnimplementedError('restartApp() has not been implemented.');
   }
+
+  /// Forces garbage collection to clean up old platform channels
+  Future<void> gc() {
+    throw UnimplementedError('gc() has not been implemented.');
+  }
 }
