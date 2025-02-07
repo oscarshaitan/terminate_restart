@@ -1,7 +1,7 @@
-import 'package:flutter/material.dart';
+// import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:terminate_restart/terminate_restart.dart';
-import 'package:terminate_restart/terminate_restart_platform_interface.dart';
+// import 'package:terminate_restart/terminate_restart_platform_interface.dart';
 import 'package:plugin_platform_interface/plugin_platform_interface.dart';
 
 class MockTerminateRestartPlatform

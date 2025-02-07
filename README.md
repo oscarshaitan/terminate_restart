@@ -29,17 +29,24 @@ The demo showcases:
 
 ## 🌟 Features
 
-- ✨ **Two Restart Modes**:
+- ✨ **Three Restart Modes**:
   - **UI-only Restart**: (~200ms)
     - Recreates activities/views while maintaining connections
     - Perfect for theme changes, language switches
     - Preserves network connections and background tasks
     - Faster execution with minimal disruption
+  
   - **Full Process Restart**: (~800ms)
     - Complete app termination and restart
     - Ideal for updates, security-related changes
     - Cleans up all resources and states
     - Ensures fresh start with no residual state
+    
+  - **With Confirmation Dialog**: (+50ms)
+    - Shows a customizable confirmation dialog
+    - User can choose to proceed or cancel
+    - Supports both UI-only and full restart
+    - Perfect for user-initiated actions
 
 - 🧹 **Smart Data Management**:
   - Configurable data clearing during restart
@@ -64,7 +71,7 @@ The demo showcases:
 
 ```yaml
 dependencies:
-  terminate_restart: ^1.0.5
+  terminate_restart: ^1.0.6
 ```
 
 ### Permissions
@@ -184,6 +191,21 @@ Widget build(BuildContext context) {
    );
    ```
 
+4. **With Confirmation Dialog**
+   ```dart
+   // Show confirmation dialog before restart
+   await TerminateRestart.instance.restartApp(
+     options: const TerminateRestartOptions(
+       terminate: true,
+     ),
+     mode: RestartMode.withConfirmation,
+     dialogTitle: 'Restart Required',
+     dialogMessage: 'Do you want to restart the app now?',
+     confirmButtonText: 'Yes, Restart',
+     cancelButtonText: 'Later',
+   );
+   ```
+
 ## 📊 Performance Metrics
 
 | Operation | Average Time |
@@ -201,9 +223,9 @@ Widget build(BuildContext context) {
    - Handle biometric authentication state
 
 2. **State Management**
-   - Clear sensitive state before restart
-   - Handle authentication tokens properly
-   - Manage secure storage access
+   - Clear sensitive data before restart
+   - Implement proper authentication state handling
+   - Use secure storage for critical information
 
 3. **Platform Security**
    - Proper permission handling
@@ -255,16 +277,6 @@ Check out our [example app](https://github.com/sleem2012/terminate_restart/tree/
 <p align="center">
   <img src="https://raw.githubusercontent.com/sleem2012/terminate_restart/main/.github/assets/demo.gif" alt="Quick Preview" width="300"/>
 </p>
-
-### Example Screenshots
-
-<p align="center">
-  <img src="https://raw.githubusercontent.com/sleem2012/terminate_restart/main/.github/assets/basic.png" alt="Basic Usage" width="250" style="margin-right: 10px"/>
-  <img src="https://raw.githubusercontent.com/sleem2012/terminate_restart/main/.github/assets/dialog.png" alt="Confirmation Dialog" width="250" style="margin-right: 10px"/>
-  <img src="https://raw.githubusercontent.com/sleem2012/terminate_restart/main/.github/assets/data_clearing.png" alt="Data Clearing" width="250"/>
-</p>
-
-> Note: For a video demonstration of the plugin in action, visit our [YouTube channel](https://youtube.com/@sleem2012).
 
 ## 🔧 Platform-Specific Details
 
@@ -449,3 +461,139 @@ This project is licensed under the MIT License - see the [LICENSE](LICENSE) file
   <a href="https://github.com/sleem2012/terminate_restart">GitHub</a> •
   <a href="https://github.com/sleem2012/terminate_restart/issues">Issues</a>
 </p>
+
+## 🤔 Frequently Asked Questions
+
+### 1. What's the difference between UI-only and Full restart?
+- **UI-only Restart**: Only recreates the UI components while keeping the app process alive. Perfect for theme changes or language switches.
+- **Full Restart**: Completely terminates the app process and starts fresh. Ideal for updates or when you need a clean state.
+
+### 2. When should I use confirmation dialog?
+Use confirmation dialog when:
+- User needs to be aware of the restart
+- Data might be lost during restart
+- Action is user-initiated
+- Critical operations are in progress
+
+### 3. Will my app data be preserved?
+- By default, all app data is preserved
+- Use `clearData: true` to clear app data
+- Use `preserveKeychain` and `preserveUserDefaults` to selectively preserve data
+
+### 4. Is it safe to use in production?
+Yes! The plugin:
+- Uses official platform APIs
+- Follows platform guidelines
+- Handles errors gracefully
+- Has no special permission requirements
+
+## 🎯 Advanced Use Cases
+
+### 1. Language Change with Data Preservation
+```dart
+Future<void> changeLanguage(String newLocale) async {
+  // Save new locale
+  await prefs.setString('locale', newLocale);
+  
+  // Restart UI only with confirmation
+  await TerminateRestart.instance.restartApp(
+    options: const TerminateRestartOptions(
+      terminate: false,
+      preserveUserDefaults: true,
+    ),
+    mode: RestartMode.withConfirmation,
+    dialogTitle: 'Language Change',
+    dialogMessage: 'Restart app to apply new language?',
+  );
+}
+```
+
+### 2. Update Installation with Progress
+```dart
+Future<void> installUpdate() async {
+  try {
+    // Download update
+    await downloadUpdate();
+    
+    // Apply update with confirmation
+    final confirmed = await TerminateRestart.instance.restartApp(
+      options: const TerminateRestartOptions(
+        terminate: true,
+        clearData: false,
+        preserveKeychain: true,
+      ),
+      mode: RestartMode.withConfirmation,
+      dialogTitle: 'Update Ready',
+      dialogMessage: 'Install update and restart?',
+    );
+    
+    if (!confirmed) {
+      scheduleUpdateReminder();
+    }
+  } catch (e) {
+    handleUpdateError(e);
+  }
+}
+```
+
+### 3. Secure Logout with Data Clearing
+```dart
+Future<void> secureLogout() async {
+  // Clear sensitive data
+  await TerminateRestart.instance.restartApp(
+    options: const TerminateRestartOptions(
+      terminate: true,
+      clearData: true,
+      preserveUserDefaults: true, // Keep app settings
+      preserveKeychain: false, // Clear credentials
+    ),
+  );
+}
+```
+
+## 🔄 How It Works
+
+```mermaid
+graph TD
+    A[Start] --> B{Restart Type}
+    B -->|UI-only| C[Recreation Mode]
+    B -->|Full| D[Termination Mode]
+    
+    C --> E{Show Dialog?}
+    D --> E
+    
+    E -->|Yes| F[Show Confirmation]
+    E -->|No| G[Process Restart]
+    
+    F -->|Confirmed| G
+    F -->|Cancelled| H[Cancel Operation]
+    
+    G --> I{Clear Data?}
+    I -->|Yes| J[Clear App Data]
+    I -->|No| K[Preserve Data]
+    
+    J --> L[Restart App]
+    K --> L
+    
+    L --> M[End]
+```
+
+### Flow Explanation:
+1. **Restart Type Selection**:
+   - Choose between UI-only or Full restart
+   - Each type optimized for specific use cases
+
+2. **Confirmation Dialog** (Optional):
+   - Can be added to any restart type
+   - Fully customizable UI
+   - User can cancel operation
+
+3. **Data Management**:
+   - Optional data clearing
+   - Selective data preservation
+   - Secure handling of sensitive data
+
+4. **Platform-Specific Implementation**:
+   - Android: Activity/Process management
+   - iOS: UIApplication handling
+   - Error handling and recovery
