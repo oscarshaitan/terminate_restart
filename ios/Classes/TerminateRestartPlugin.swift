@@ -116,10 +116,8 @@ public class TerminateRestartPlugin: NSObject, FlutterPlugin {
             window.isUserInteractionEnabled = false
             
             // Get the Flutter engine
-            guard let flutterEngine = flutterViewController.engine as? FlutterEngine else {
-                print(" [TerminateRestart] Error: No Flutter engine found")
-                return
-            }
+            let flutterEngine = flutterViewController.engine
+
             
             // Create a new engine
             let newEngine = FlutterEngine(name: "restart_engine")
